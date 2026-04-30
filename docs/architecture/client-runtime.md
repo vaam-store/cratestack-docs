@@ -182,7 +182,7 @@ let selection = cratestack_schema::post::select()
 
 let post = cratestack_schema::client::Client::new(runtime)
     .posts()
-    .get_selected(&1, &selection, &[])
+    .get_view(&1, &selection, &[])
     .await?;
 
 let author = post.author()?;
@@ -298,7 +298,7 @@ Implemented in this repo:
 9. one CRUD error-path call against generated Axum-compatible CBOR routes
 10. a generated Dart runtime that now targets a byte-oriented bridge instead of owning Dio directly
 11. canonical typed Dart query helpers for `fields`, `include`, relation-specific `includeFields[path]`, `sort`, `limit`, `offset`, grouped `where=`, legacy `or=`, and resource-specific filters, plus per-model field/include constants for safer selection assembly
-12. generated Dart selection builders plus projected wrapper objects for `getSelected` / `listSelected`
+12. generated Dart selection builders plus projection wrappers for `getView` / `listView`
 13. request-authorizer hooks in `cratestack-client-rust` built around canonical request strings so host integrations can attach signed-request headers without changing generated clients
 14. runtime-wide transport config for `cbor` and `json`, with a reserved future envelope seam
 15. documented target-state transport layering across codec, framing, and envelope, including a future `application/cbor-seq` path
@@ -335,7 +335,7 @@ Deferred from the spike:
 
 ## Current implementation note
 
-The current `cratestack-client-dart` crate should be treated as an experimental runtime-oriented and bridge-facing slice. It no longer owns Dio directly, renders through repo-managed templates that callers can override, and still uses generic value graphs for typed model conversion while the Rust-owned bridge and codec story continues to mature. The generated Dart APIs now expose canonical projection query options plus selection builders and projected wrappers for selected reads. On the Rust side, `cratestack-client-rust` now exposes additive request-authorizer hooks and a generated schema-native client facade over the same runtime. Selection-aware response typing is still intentionally incomplete overall, so callers should treat these projections as a contract-aligned safety improvement rather than assuming every narrowed selection is perfectly type-level exact.
+The current `cratestack-client-dart` crate should be treated as an experimental runtime-oriented and bridge-facing slice. It no longer owns Dio directly, renders through repo-managed templates that callers can override, and still uses generic value graphs for typed model conversion while the Rust-owned bridge and codec story continues to mature. The generated Dart APIs now expose canonical projection query options plus selection builders and projection wrappers for projected reads. On the Rust side, `cratestack-client-rust` now exposes additive request-authorizer hooks and a generated schema-native client facade over the same runtime. Selection-aware response typing is still intentionally incomplete overall, so callers should treat these projections as a contract-aligned safety improvement rather than assuming every narrowed selection is perfectly type-level exact.
 
 ## Examples
 

@@ -229,7 +229,7 @@ What this gives you today:
 * generated model types
 * generated selection builders
 * generated schema-native Rust client facade
-* generated selected wrappers
+* generated projection wrappers
 * generated procedure clients
 * generated relation includes for `ownerSummary` and `assets`
 
@@ -301,7 +301,7 @@ pub async fn fetch_catalog_product() -> Result<(), cratestack::client_rust::Clie
 
     let product = client
         .products()
-        .get_selected(&"prod_123".to_owned(), &selection, &[])
+        .get_view(&"prod_123".to_owned(), &selection, &[])
         .await?;
 
     let _title = product.title()?;
@@ -485,28 +485,30 @@ ProviderScope(
 
 ## Step 9: Use The Generated Dart Client
 
-Example selected read:
+Example projected read:
 
 ```dart
 import 'package:gen_catalog_client/gen_catalog_client.dart';
 
 Future<void> fetchCatalogProduct(GenCatalogClientCrateStackClient client) async {
-  final product = await client.products.getSelected(
+  final selection = ProductSelection()
+    ..id()
+    ..title()
+    ..status()
+    ..priceMinor()
+    ..ownerSummary((owner) {
+      owner.displayName();
+      owner.nickname();
+    })
+    ..assets((asset) {
+      asset.id();
+      asset.kind();
+      asset.url();
+    });
+
+  final product = await client.products.getView(
     'prod_123',
-    selection: ProductSelection()
-      ..id()
-      ..title()
-      ..status()
-      ..priceMinor()
-      ..ownerSummary((owner) {
-        owner.displayName();
-        owner.nickname();
-      })
-      ..assets((asset) {
-        asset.id();
-        asset.kind();
-        asset.url();
-      }),
+    projection: selection.asProjection(),
   );
 
   final title = product.title;
@@ -525,11 +527,11 @@ That file shows the intended app-side pattern:
 
 * override `genCatalogClientRuntimeBridgeProvider`
 * override `genCatalogClientBasePathProvider` to `''` for the current catalog service
-* consume generated selected reads and procedures through a small app-owned facade
+* consume generated projected reads and procedures through a small app-owned facade
 
 This uses the current generated Dart surface accurately:
 
-* `getSelected` / `listSelected`
+* `getView` / `listView`
 * selection builders
 * projected wrapper objects
 * projection builders flattened into canonical query params by the generated package

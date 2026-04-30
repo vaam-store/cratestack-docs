@@ -518,7 +518,7 @@ Current `@@paged` boundary:
 * `@@paged` is a bare model-level opt-in only
 * it only changes the generated top-level list route for that model
 * generated `GET /{models}` responses become `Page<Model>` instead of `Model[]`
-* generated Rust and Dart model `list(...)` and `listSelected(...)` clients follow the same paged contract
+* generated Rust and Dart model `list(...)` and projection-driven `listView(...)` clients follow the same paged contract
 * paging is still offset-based through `limit` and `offset`
 * nested relation collections and detail routes are unaffected
 
@@ -1064,8 +1064,8 @@ Current generated Rust selection boundary:
 
 * root `Selection` builders choose root scalar fields and nested include paths
 * nested `IncludeSelection` builders choose scalar fields and nested include paths under the already-included relation
-* selected wrappers decode projected payloads without changing the wire contract
-* exact type-level projection remains intentionally looser than the selected wrapper surface
+* projection wrappers decode projected payloads without changing the wire contract
+* exact type-level projection remains intentionally looser than the projection wrapper surface
 
 Recursive relation filters and first-pass relation-aware ordering use those explicit `@relation(fields:[...],references:[...])` declarations rather than foreign-key inference.
 
