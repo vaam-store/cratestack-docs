@@ -1,6 +1,6 @@
 # Getting Started With `catalog-service` And `vaam-mobile`
 
-This guide documents the first end-to-end adoption path for CoolStack inside this repo.
+This guide documents the first end-to-end adoption path for CrateStack inside this repo.
 
 Target outcome:
 
@@ -15,11 +15,11 @@ Target outcome:
 
 Verified current state in this repo:
 
-* `vaam-backends/services/catalog-service` now uses a generated CoolStack router for products and procedures, with only health checks left manual.
+* `vaam-backends/services/catalog-service` now uses a generated CrateStack router for products and procedures, with only health checks left manual.
 * The richer catalog relation slice is now live-verified for `ownerSummary`, `assets`, `thumbnailAsset`, `options`, `variants`, and nested `Variant.thumbnailAsset`.
 * The catalog contract is currently described in prose at `vaam-backends/docs/service-interface/catalog-service.md`.
 * `catalog.cool` now covers `Owner`, `Asset`, `ProductOption`, `Variant`, `Product`, and the publish/upload procedures at `vaam-backends/services/catalog-service/schema/catalog.cool`.
-* The CoolStack CLI currently supports `generate-dart`, `check`, `check --format json`, and `print-ir`.
+* The CrateStack CLI currently supports `generate-dart`, `check`, `check --format json`, and `print-ir`.
 * There is no standalone `generate-rust` CLI command yet.
 * Rust client generation exists today through `include_schema!` compile-time codegen.
 * `frontends/vaam-mobile/pubspec.yaml` already uses local path dependencies.
@@ -175,7 +175,7 @@ cargo run -p coolstack-cli -- check \
   --schema "../vaam-backends/services/catalog-service/schema/catalog.cool"
 ```
 
-If this passes, CoolStack can consume the schema for both generated client paths.
+If this passes, CrateStack can consume the schema for both generated client paths.
 
 If you need machine-readable diagnostics for editor fallback or CI glue, use:
 
@@ -322,7 +322,7 @@ cargo check --manifest-path "frontends/vaam-mobile/rust/Cargo.toml"
 
 ## Step 5.1: Host Auth Through `AuthProvider`
 
-Generated CoolStack routers no longer need a route-local context resolver closure. The host application provides one `AuthProvider` implementation and registers it once.
+Generated CrateStack routers no longer need a route-local context resolver closure. The host application provides one `AuthProvider` implementation and registers it once.
 
 Example from `vaam-backends/services/catalog-service/src/lib.rs`:
 
@@ -392,7 +392,7 @@ let bound = db.bind_auth(Some(serde_json::json!({
 let products = bound.product().find_many().run().await?;
 ```
 
-For newer integrations, prefer binding structured principals when actor/session/tenant concepts exist. CoolStack still projects those values through legacy `auth().field` lookups so existing schemas do not need to change immediately.
+For newer integrations, prefer binding structured principals when actor/session/tenant concepts exist. CrateStack still projects those values through legacy `auth().field` lookups so existing schemas do not need to change immediately.
 
 ## Step 6: Generate The Dart Package
 
@@ -564,7 +564,7 @@ This guide is accurate to the current repo, but these gaps still matter:
 * `catalog-service` is still an early slice, so the schema should keep growing in narrow vertical steps
 * exact type-level projection remains stronger on Rust than on Dart
 * this first schema intentionally avoids `/products/mine` and other owner-specific convenience routes
-* special flows such as `publish` and uploads now live as generated CoolStack procedures rather than manual handlers
+* special flows such as `publish` and uploads now live as generated CrateStack procedures rather than manual handlers
 * request-authorizer hooks exist in Rust, but full COSE transport completion is still deferred
 * current generated backend routing uses the CBOR codec path rather than the older JSON fallback behavior
 * current generated backend auth is intentionally simplified to header/context-based auth for this slice
@@ -581,7 +581,7 @@ After this guide is used once for real, the highest-value follow-up is:
 4. record the friction points
 5. decide whether the next improvement should be:
     - a real `generate-rust` CLI command
-    - public-read/protected-write router splitting in CoolStack
+    - public-read/protected-write router splitting in CrateStack
     - JSON fallback for generated backend routes
     - better shared schema placement/tooling
     - tighter mobile runtime integration

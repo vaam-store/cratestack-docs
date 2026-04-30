@@ -1,4 +1,4 @@
-# CoolStack Client Runtime Architecture
+# CrateStack Client Runtime Architecture
 
 ## Status
 
@@ -6,7 +6,7 @@ Proposed and partially spiked.
 
 ## Why this change
 
-CoolStack's transport contract is not JSON-first. The documented direction is:
+CrateStack's transport contract is not JSON-first. The documented direction is:
 
 1. generated HTTP routes remain the canonical API surface
 2. CBOR is the primary codec
@@ -310,7 +310,7 @@ sequenceDiagram
     participant Dart as generated Dart API
     participant Bridge as runtime bridge
     participant Rust as coolstack-client-rust
-    participant API as generated CoolStack route
+    participant API as generated CrateStack route
 
     App->>Dart: list(query: sort/where/limit)
     Dart->>Bridge: canonical request

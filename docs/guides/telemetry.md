@@ -1,10 +1,10 @@
-# CoolStack Telemetry
+# CrateStack Telemetry
 
 ## Status
 
 Implemented current-state documentation for the generated tracing slice.
 
-CoolStack currently emits structured `tracing` spans and events from generated server code, but it does not install or
+CrateStack currently emits structured `tracing` spans and events from generated server code, but it does not install or
 configure a subscriber for the host application.
 
 ## Current Coverage
@@ -23,7 +23,7 @@ Generated telemetry does not currently cover:
 
 ## Host Setup
 
-CoolStack re-exports `tracing` as `coolstack::tracing`, but subscriber setup stays host-owned.
+CrateStack re-exports `tracing` as `coolstack::tracing`, but subscriber setup stays host-owned.
 
 Minimal example:
 

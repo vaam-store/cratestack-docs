@@ -1,10 +1,10 @@
-# CoolStack Editor Tooling
+# CrateStack Editor Tooling
 
-This document records the current state of CoolStack editor support, how to use it locally, and the most useful follow-up work.
+This document records the current state of CrateStack editor support, how to use it locally, and the most useful follow-up work.
 
 ## Scope
 
-CoolStack has two editor surfaces:
+CrateStack has two editor surfaces:
 
 * Rust files that consume `coolstack::include_schema!(...)`
 * `.cool` schema files authored directly

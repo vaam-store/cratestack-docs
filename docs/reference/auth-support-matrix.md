@@ -1,13 +1,13 @@
 # Auth Support Matrix
 
-This document records the current executable CoolStack auth and policy surface.
+This document records the current executable CrateStack auth and policy surface.
 
 The matrix categories are intentionally modeled after the public ZenStack 2025/2026 access-policy surface described in:
 
 * `https://zenstack.dev/blog/prisma-alternative`
 * `https://zenstack.dev/blog/orm-2026`
 
-CoolStack is not trying to claim ZenStack feature parity. The goal is to make it obvious which policy patterns are
+CrateStack is not trying to claim ZenStack feature parity. The goal is to make it obvious which policy patterns are
 supported today, which are partial, and which are still out of scope.
 
 ## Current Semantics
@@ -36,7 +36,7 @@ Auth-derived defaults:
 
 ## Matrix
 
-| Capability                                  | ZenStack-style expectation                     | CoolStack 2026 status | Notes                                                                                                                   |
+| Capability                                  | ZenStack-style expectation                     | CrateStack 2026 status | Notes                                                                                                                   |
 |---------------------------------------------|------------------------------------------------|-----------------------|-------------------------------------------------------------------------------------------------------------------------|
 | Model `@@allow`                             | Supported                                      | Supported             | `list`, `detail`, `read`, `create`, `update`, `delete`                                                                  |
 | Model `@@deny`                              | Supported                                      | Supported             | Deny precedence implemented                                                                                             |

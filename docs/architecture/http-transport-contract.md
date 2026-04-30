@@ -1,4 +1,4 @@
-# CoolStack HTTP Transport Contract
+# CrateStack HTTP Transport Contract
 
 ## Status
 
@@ -69,7 +69,7 @@ Terms in this document follow `./transport-architecture.md`.
 
 ### Future envelope media types
 
-COSE media-type details are intentionally deferred. CoolStack should not imply a COSE wire contract until the outer media type and inner-content signaling rules are documented.
+COSE media-type details are intentionally deferred. CrateStack should not imply a COSE wire contract until the outer media type and inner-content signaling rules are documented.
 
 ## Feature Matrix
 
@@ -118,7 +118,7 @@ Contract:
 1. `Content-Type` must identify one request transport supported by the route
 2. the server decodes the body using the matching transport
 3. unsupported media types return `415`
-4. malformed bodies return `400 Bad Request` or the existing CoolStack decode error classification
+4. malformed bodies return `400 Bad Request` or the existing CrateStack decode error classification
 
 Illustrative phase-one supported request media types:
 
@@ -262,7 +262,7 @@ Current repo reality:
 2. `coolstack-client-rust` sends a preferred `Accept` list and decodes by actual response `Content-Type`
 3. generated Rust client methods for list-returning procedures use explicit sequence-aware decode paths
 4. generated Axum metadata is publicly inspectable through `coolstack_schema::axum::ROUTE_TRANSPORTS`
-5. `catalog-service` wires generated routes with `CodecSet::new(CborCodec, JsonCodec)`, so its CoolStack-generated routes now support negotiated JSON and CBOR
+5. `catalog-service` wires generated routes with `CodecSet::new(CborCodec, JsonCodec)`, so its CrateStack-generated routes now support negotiated JSON and CBOR
 6. `catalog-service` does not currently have a list-returning generated procedure that exercises `application/cbor-seq`
 
 

@@ -1,6 +1,6 @@
 # cratestack-docs
 
-Mintlify-ready documentation project for the framework currently branded as `CoolStack` in this workspace.
+Mintlify-ready documentation project for the framework being prepared for public release as `CrateStack`.
 
 Current contents:
 

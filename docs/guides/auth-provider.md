@@ -1,12 +1,12 @@
 # Auth Provider
 
-CoolStack does not authenticate requests itself.
+CrateStack does not authenticate requests itself.
 
 The host application is responsible for:
 
 * reading headers, cookies, bearer tokens, signed requests, or other transport-specific auth material
 * validating that material
-* projecting the authenticated principal into a CoolStack auth context
+* projecting the authenticated principal into a CrateStack auth context
 
 The framework boundary for that is `coolstack::AuthProvider`.
 
@@ -138,7 +138,7 @@ The recommended direction for new integrations is:
 * prefer structured principals with top-level `actor`, `session`, and `tenant` objects when those concepts exist
 * treat ad hoc top-level scalar claims as compatibility or app-specific extensions rather than the long-term principal shape
 
-CoolStack still accepts the older header-only resolver closure shape:
+CrateStack still accepts the older header-only resolver closure shape:
 
 ```rust
 Fn(&HeaderMap) -> Result<CoolContext, CoolError>

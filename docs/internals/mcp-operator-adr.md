@@ -10,7 +10,7 @@ Proposed
 
 ## Context
 
-CoolStack v0 is designed as a Rust-native, schema-first framework layer that generates:
+CrateStack v0 is designed as a Rust-native, schema-first framework layer that generates:
 
 * a SQLx-backed ORM
 * REST CRUD endpoints
@@ -20,25 +20,25 @@ CoolStack v0 is designed as a Rust-native, schema-first framework layer that gen
 
 The primary application API remains HTTP REST and must support CBOR/COSE without assuming JSON.
 
-However, CoolStack can also provide value to AI-native systems by exposing selected schema capabilities through the Model Context Protocol (MCP). MCP-compatible clients can discover resources and tools from an MCP server. This makes it possible for agents to inspect allowed application data and invoke selected business procedures through a standardized interface.
+However, CrateStack can also provide value to AI-native systems by exposing selected schema capabilities through the Model Context Protocol (MCP). MCP-compatible clients can discover resources and tools from an MCP server. This makes it possible for agents to inspect allowed application data and invoke selected business procedures through a standardized interface.
 
 There is an important tension:
 
-* CoolStack's primary API direction is REST-only, no RPC.
-* CoolStack's primary transport direction avoids JSON assumptions.
+* CrateStack's primary API direction is REST-only, no RPC.
+* CrateStack's primary transport direction avoids JSON assumptions.
 * MCP itself is a separate protocol surface and is JSON-RPC based.
 
-Therefore MCP must be treated as an optional agent-facing operator, not as CoolStack's primary application API and not as a replacement for REST.
+Therefore MCP must be treated as an optional agent-facing operator, not as CrateStack's primary application API and not as a replacement for REST.
 
 ## Decision
 
-CoolStack will support an optional MCP operator surface.
+CrateStack will support an optional MCP operator surface.
 
 The MCP operator will be generated from the `.cool` schema and will expose selected resources and tools to MCP-compatible clients.
 
 The MCP operator is explicitly separate from the primary REST API.
 
-CoolStack's primary application API remains:
+CrateStack's primary application API remains:
 
 ```text
 HTTP REST + CoolCodec + optional CoolEnvelope
@@ -47,16 +47,16 @@ HTTP REST + CoolCodec + optional CoolEnvelope
 The MCP operator is:
 
 ```text
-MCP protocol adapter + CoolStack permissions + selected schema exposure
+MCP protocol adapter + CrateStack permissions + selected schema exposure
 ```
 
 MCP support must be opt-in.
 
-MCP support must not pull MCP dependencies into CoolStack core.
+MCP support must not pull MCP dependencies into CrateStack core.
 
 MCP support must not require JSON support in the REST codec layer.
 
-MCP exposure must never bypass CoolStack permissions.
+MCP exposure must never bypass CrateStack permissions.
 
 ## Terminology
 
@@ -64,7 +64,7 @@ MCP exposure must never bypass CoolStack permissions.
 
 An MCP resource is a read-only data item exposed by the server for client context.
 
-In CoolStack, MCP resources may be generated from:
+In CrateStack, MCP resources may be generated from:
 
 * schema metadata
 * selected model collections
@@ -75,13 +75,13 @@ In CoolStack, MCP resources may be generated from:
 
 An MCP tool is an invokable operation exposed by the server.
 
-In CoolStack, MCP tools should primarily be generated from schema-defined procedures.
+In CrateStack, MCP tools should primarily be generated from schema-defined procedures.
 
 Optional CRUD-derived tools may be added later, but procedures are the preferred tool boundary.
 
 ## MCP Operator
 
-The MCP operator is the generated server adapter that maps MCP resource and tool calls to CoolStack ORM and procedure operations while enforcing CoolStack authorization policies.
+The MCP operator is the generated server adapter that maps MCP resource and tool calls to CrateStack ORM and procedure operations while enforcing CrateStack authorization policies.
 
 ## Schema Design
 
@@ -152,7 +152,7 @@ This is separate from authorization.
 An operation must be both:
 
 1. exposed through MCP, and
-2. authorized by CoolStack permissions.
+2. authorized by CrateStack permissions.
 
 ## Permission Model
 
@@ -229,7 +229,7 @@ For a model annotated as:
 @@mcp.resource("posts")
 ```
 
-CoolStack may expose resources such as:
+CrateStack may expose resources such as:
 
 ```text
 cool://schema/models/Post
@@ -261,7 +261,7 @@ For a procedure annotated as:
 @mcp.tool(name: "publish_post")
 ```
 
-CoolStack exposes an MCP tool named:
+CrateStack exposes an MCP tool named:
 
 ```text
 publish_post
@@ -287,7 +287,7 @@ MCP tool call
 
 ## Authentication and Context
 
-MCP does not replace CoolStack authentication delegation.
+MCP does not replace CrateStack authentication delegation.
 
 The MCP integration must provide a way to construct `CoolContext` from the MCP session/request.
 
@@ -304,7 +304,7 @@ There must be no silent assumption that MCP clients are trusted.
 
 ## Transport Considerations
 
-CoolStack REST transport remains codec/envelope based and may use CBOR/COSE.
+CrateStack REST transport remains codec/envelope based and may use CBOR/COSE.
 
 MCP transport is separate.
 
@@ -383,13 +383,13 @@ Exact structures may differ, but MCP exposure must be represented explicitly in 
 
 ## Positive Consequences
 
-* AI agents can discover and use CoolStack-backed capabilities automatically.
+* AI agents can discover and use CrateStack-backed capabilities automatically.
 * Procedures become reusable across REST, local Rust calls, and MCP tools.
 * Model read policies also protect MCP resources.
 * MCP support does not disrupt the REST-first architecture.
 * JSON remains out of the core REST codec layer.
 * MCP dependencies stay isolated.
-* CoolStack can support agent workflows without making RPC the primary product API.
+* CrateStack can support agent workflows without making RPC the primary product API.
 
 ## Negative Consequences
 
@@ -404,11 +404,11 @@ Exact structures may differ, but MCP exposure must be represented explicitly in 
 
 ## Alternative 1: Do Not Support MCP
 
-Rejected because MCP is valuable for agent-facing integration and can be generated from CoolStack's schema and procedure metadata.
+Rejected because MCP is valuable for agent-facing integration and can be generated from CrateStack's schema and procedure metadata.
 
 ## Alternative 2: Treat MCP as the Primary API
 
-Rejected because CoolStack's primary API is REST with codec/envelope support. MCP is a separate agent-facing surface.
+Rejected because CrateStack's primary API is REST with codec/envelope support. MCP is a separate agent-facing surface.
 
 ## Alternative 3: Automatically Expose All Procedures as MCP Tools
 
@@ -420,7 +420,7 @@ Rejected because this may leak data and schema structure. Model MCP resources mu
 
 ## Alternative 5: Reuse REST Routes for MCP
 
-Rejected because MCP has its own discovery and invocation semantics. It should be implemented as a separate adapter over the same CoolStack ORM/procedure layer, not as a wrapper over REST endpoints.
+Rejected because MCP has its own discovery and invocation semantics. It should be implemented as a separate adapter over the same CrateStack ORM/procedure layer, not as a wrapper over REST endpoints.
 
 ## Decision Drivers
 
@@ -448,4 +448,4 @@ Rejected because MCP has its own discovery and invocation semantics. It should b
 
 ## Final Decision Statement
 
-CoolStack will support MCP as an optional generated operator surface that exposes explicitly annotated schema resources and procedures as MCP resources and tools. This surface is separate from the primary REST API, must not bypass CoolStack permissions, must remain default-off, and must isolate MCP's JSON-RPC requirements from the REST codec/envelope architecture.
+CrateStack will support MCP as an optional generated operator surface that exposes explicitly annotated schema resources and procedures as MCP resources and tools. This surface is separate from the primary REST API, must not bypass CrateStack permissions, must remain default-off, and must isolate MCP's JSON-RPC requirements from the REST codec/envelope architecture.

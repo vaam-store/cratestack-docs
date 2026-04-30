@@ -1,8 +1,8 @@
-# CoolStack v0 PRD
+# CrateStack v0 PRD
 
 ## 1. Product Summary
 
-CoolStack is a Rust-native, schema-first backend framework layer for building typed database-backed HTTP REST APIs, generated clients, declarative authorization policies, and custom business procedures.
+CrateStack is a Rust-native, schema-first backend framework layer for building typed database-backed HTTP REST APIs, generated clients, declarative authorization policies, and custom business procedures.
 
 Developers define their data model, authorization rules, field exposure directives, custom fields, and procedures in `.cool` schema files, then include them in Rust using:
 
@@ -10,9 +10,9 @@ Developers define their data model, authorization rules, field exposure directiv
 coolstack::include_schema!("schema.cool");
 ```
 
-The macro generates a typed ORM client, canonical REST CRUD routes, procedure interfaces, request/response types, generated client metadata, and policy enforcement code. CoolStack uses `sqlx` behind the scenes for database access and supports pluggable transport composition so applications can use JSON, CBOR, sequence-aware transports such as `application/cbor-seq`, and future COSE envelopes without sacrificing developer experience.
+The macro generates a typed ORM client, canonical REST CRUD routes, procedure interfaces, request/response types, generated client metadata, and policy enforcement code. CrateStack uses `sqlx` behind the scenes for database access and supports pluggable transport composition so applications can use JSON, CBOR, sequence-aware transports such as `application/cbor-seq`, and future COSE envelopes without sacrificing developer experience.
 
-CoolStack v0 is intentionally focused:
+CrateStack v0 is intentionally focused:
 
 * Rust-first
 * PostgreSQL-first
@@ -31,7 +31,7 @@ CoolStack v0 is intentionally focused:
 * Optional COSE envelope support
 * Generated Rust clients as a first-class output
 
-CoolStack v0 does not attempt to provide RPC, GraphQL, a full plugin marketplace, or built-in authentication.
+CrateStack v0 does not attempt to provide RPC, GraphQL, a full plugin marketplace, or built-in authentication.
 
 ---
 
@@ -52,7 +52,7 @@ Rust backend developers often need to repeatedly build the same foundation acros
 
 Existing Rust ORMs and web frameworks are powerful, but they usually require significant manual wiring between schema, database, authorization, and HTTP transport. Many systems also assume JSON as the default wire format, which is unacceptable for projects that require CBOR and COSE.
 
-CoolStack solves this by making the schema the source of truth and generating the surrounding Rust API, REST layer, and client contracts while keeping authentication, transport encoding, and cryptographic wrapping configurable.
+CrateStack solves this by making the schema the source of truth and generating the surrounding Rust API, REST layer, and client contracts while keeping authentication, transport encoding, and cryptographic wrapping configurable.
 
 ### 2.1 Representative Use Cases
 
@@ -142,7 +142,7 @@ Canonical transport design and HTTP negotiation rules are documented in:
 
 ## 4. Non-Goals for v0
 
-CoolStack v0 explicitly does not include:
+CrateStack v0 explicitly does not include:
 
 1. RPC transport.
 2. GraphQL.
@@ -213,7 +213,7 @@ The `.cool` schema is the source of truth for:
 
 ### 6.2 ORM Client
 
-CoolStack generates a typed Rust ORM client with model delegates:
+CrateStack generates a typed Rust ORM client with model delegates:
 
 ```rust
 let posts = cool
@@ -246,7 +246,7 @@ let visible_posts = cool
 
 ### 6.3 REST CRUD
 
-CoolStack generates conventional REST endpoints for models:
+CrateStack generates conventional REST endpoints for models:
 
 ```text
 GET    /api/posts
@@ -336,7 +336,7 @@ No matching allow rule means deny.
 
 ### 6.6 Authentication Delegation
 
-CoolStack does not authenticate users.
+CrateStack does not authenticate users.
 
 The host application or framework is responsible for:
 
@@ -360,7 +360,7 @@ The framework generates a resolver trait for custom fields so that applications 
 
 ### 6.8 Generated Clients
 
-Generated HTTP routes are the normal API surface of a CoolStack service.
+Generated HTTP routes are the normal API surface of a CrateStack service.
 
 The framework should generate:
 
@@ -371,7 +371,7 @@ Generated Rust clients should expose both high-level typed operations and a lowe
 * OAuth
 * user lookup
 
-CoolStack only consumes a `CoolContext` that represents the already-authenticated request identity.
+CrateStack only consumes a `CoolContext` that represents the already-authenticated request identity.
 
 ### 6.7 Codec
 
@@ -465,7 +465,7 @@ mutation procedure publishPost(args: PublishPostInput): Post
 
 ## 8.1 Schema Parsing
 
-CoolStack must parse `.cool` files containing:
+CrateStack must parse `.cool` files containing:
 
 * datasource blocks
 * auth blocks
@@ -553,7 +553,7 @@ Explicit non-goals for the current slice:
 
 ## 8.2 Semantic Analysis
 
-CoolStack must validate:
+CrateStack must validate:
 
 1. duplicate model names
 2. duplicate type names
@@ -656,7 +656,7 @@ Optional but desirable:
 
 ### 8.4.3 SQL Backend
 
-CoolStack v0 must use SQLx behind the scenes.
+CrateStack v0 must use SQLx behind the scenes.
 
 Recommended implementation:
 
@@ -774,7 +774,7 @@ Generated handler behavior:
 
 ### 8.5.6 No System Bypass in v0
 
-CoolStack v0 must not provide:
+CrateStack v0 must not provide:
 
 ```rust
 db.as_system()
@@ -788,7 +788,7 @@ Procedures use the same policy-protected ORM methods as all other code.
 
 ### 8.6.1 Schema Declaration
 
-CoolStack supports:
+CrateStack supports:
 
 ```cool
 procedure getFeed(limit: Int?): Post[]
@@ -797,7 +797,7 @@ mutation procedure signUp(args: SignUpInput): User
 
 ### 8.6.2 Generated Types
 
-CoolStack generates input and output types for procedure arguments and return values.
+CrateStack generates input and output types for procedure arguments and return values.
 
 Input types derive:
 
@@ -820,7 +820,7 @@ sqlx::FromRow
 
 ### 8.6.3 Generated Procedure Trait
 
-CoolStack generates a trait that the application must implement.
+CrateStack generates a trait that the application must implement.
 
 Example:
 
@@ -848,7 +848,7 @@ let cool = Coolstack::builder(pool)
 
 ### 8.6.5 Procedure ORM API
 
-CoolStack may also expose procedures through a typed local API:
+CrateStack may also expose procedures through a typed local API:
 
 ```rust
 let user = cool
@@ -1102,7 +1102,7 @@ JSON must not be assumed by the generated code.
 
 ### 8.7.4 Content Negotiation
 
-For v0, CoolStack may enforce a single configured codec per router.
+For v0, CrateStack may enforce a single configured codec per router.
 
 Example:
 
@@ -1111,13 +1111,13 @@ Content-Type: application/cbor
 Accept: application/cbor
 ```
 
-If the request uses an unsupported content type, CoolStack should return:
+If the request uses an unsupported content type, CrateStack should return:
 
 ```text
 415 Unsupported Media Type
 ```
 
-If the response cannot satisfy `Accept`, CoolStack should return:
+If the response cannot satisfy `Accept`, CrateStack should return:
 
 ```text
 406 Not Acceptable
@@ -1159,7 +1159,7 @@ INTERNAL_ERROR
 
 ### 8.8.1 Codec Trait
 
-CoolStack core exposes:
+CrateStack core exposes:
 
 ```rust
 pub trait CoolCodec: Clone + Send + Sync + 'static {
@@ -1214,7 +1214,7 @@ This allows codecs to work without custom generated serializers.
 
 ### 8.9.1 Envelope Trait
 
-CoolStack core exposes:
+CrateStack core exposes:
 
 ```rust
 pub trait CoolEnvelope: Clone + Send + Sync + 'static {
@@ -1295,7 +1295,7 @@ ctx.transport.verified = true
 
 ## 8.10 Authentication Context Requirements
 
-CoolStack must expose a flexible context type:
+CrateStack must expose a flexible context type:
 
 ```rust
 pub struct CoolContext {
@@ -1537,7 +1537,7 @@ let post = cool
 
 ## 11. Error Handling
 
-CoolStack should use one primary error type:
+CrateStack should use one primary error type:
 
 ```rust
 pub enum CoolError {
@@ -1842,7 +1842,7 @@ Deliverables:
 
 ## 16. v0 Acceptance Criteria
 
-CoolStack v0 is successful when a developer can:
+CrateStack v0 is successful when a developer can:
 
 1. Create a `.cool` schema with models, policies, types, and procedures.
 2. Include it with `coolstack::include_schema!("schema.cool")`.
@@ -1984,4 +1984,4 @@ After v0:
 
 ## 21. One-Sentence Product Definition
 
-CoolStack is a Rust-native schema-first framework layer that turns `.cool` files into a typed SQLx-backed ORM, policy-protected REST CRUD API, and custom REST procedure endpoints with pluggable CBOR/COSE-capable transport support.
+CrateStack is a Rust-native schema-first framework layer that turns `.cool` files into a typed SQLx-backed ORM, policy-protected REST CRUD API, and custom REST procedure endpoints with pluggable CBOR/COSE-capable transport support.

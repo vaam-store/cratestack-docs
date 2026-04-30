@@ -1,4 +1,4 @@
-# CoolStack Transport Architecture
+# CrateStack Transport Architecture
 
 ## Status
 
@@ -14,13 +14,13 @@ Current implementation is narrower than this design:
 
 ## Purpose
 
-CoolStack needs a transport model that stays correct as the project grows from today's CBOR-first bootstrap slice to a broader multi-client, multi-service, and optional signed-envelope platform.
+CrateStack needs a transport model that stays correct as the project grows from today's CBOR-first bootstrap slice to a broader multi-client, multi-service, and optional signed-envelope platform.
 
 This document fixes the architecture vocabulary first so implementation work does not blur distinct concerns.
 
 ## Core Model
 
-CoolStack transport is composed from three separate layers:
+CrateStack transport is composed from three separate layers:
 
 1. codec
 2. framing
@@ -175,7 +175,7 @@ This repo has not yet committed to final envelope media types for COSE-wrapped p
 
 Questions to settle before COSE implementation:
 
-1. whether the outer response type is a generic COSE media type or a CoolStack-specific profile
+1. whether the outer response type is a generic COSE media type or a CrateStack-specific profile
 2. how the inner codec and framing are declared or discoverable
 3. whether some routes require envelopes while others merely allow them
 

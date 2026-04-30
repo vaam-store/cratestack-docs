@@ -1,4 +1,4 @@
-# ADR 0001: Core Architecture for CoolStack v0
+# ADR 0001: Core Architecture for CrateStack v0
 
 ## Status
 
@@ -10,7 +10,7 @@ Proposed
 
 ## Context
 
-CoolStack is intended to be a Rust-native, schema-first backend framework layer for building typed database-backed HTTP REST APIs, generated clients, declarative authorization policies, and custom business procedures.
+CrateStack is intended to be a Rust-native, schema-first backend framework layer for building typed database-backed HTTP REST APIs, generated clients, declarative authorization policies, and custom business procedures.
 
 The primary developer experience should be:
 
@@ -18,7 +18,7 @@ The primary developer experience should be:
 coolstack::include_schema!("schema.cool");
 ```
 
-Developers should define their data model, authorization rules, field exposure rules, custom fields, and procedures in `.cool` schema files. CoolStack should generate a typed ORM client, canonical REST CRUD routes, procedure interfaces, request/response types, generated client libraries, and policy enforcement code.
+Developers should define their data model, authorization rules, field exposure rules, custom fields, and procedures in `.cool` schema files. CrateStack should generate a typed ORM client, canonical REST CRUD routes, procedure interfaces, request/response types, generated client libraries, and policy enforcement code.
 
 The project has several important constraints:
 
@@ -30,7 +30,7 @@ The project has several important constraints:
 * No RPC transport in v0.
 * No separate service-description requirement in v0.
 * Authentication is delegated to the host framework or application.
-* Authorization remains a core CoolStack responsibility.
+* Authorization remains a core CrateStack responsibility.
 * Procedures are essential and must be first-class.
 * Procedures must always be schema-declared and generated as Rust traits.
 * CRUD exposure must be schema-configurable per model and per operation.
@@ -45,7 +45,7 @@ The project has several important constraints:
 
 ## Decision
 
-CoolStack v0 will use a macro-first, schema-first architecture centered around:
+CrateStack v0 will use a macro-first, schema-first architecture centered around:
 
 ```rust
 coolstack::include_schema!("schema.cool");
@@ -65,19 +65,19 @@ The macro will parse and validate the `.cool` schema at compile time and generat
 * custom-field resolver traits
 * the generated `Coolstack` runtime type
 
-CoolStack v0 will use SQLx as the database execution backend and PostgreSQL as the only supported database.
+CrateStack v0 will use SQLx as the database execution backend and PostgreSQL as the only supported database.
 
-CoolStack v0 will expose HTTP REST routes only. It will generate CRUD endpoints for models and POST endpoints for procedures. Those generated routes are the canonical service APIs, and other services are expected to call them through generated clients rather than through ad hoc private runtime APIs.
+CrateStack v0 will expose HTTP REST routes only. It will generate CRUD endpoints for models and POST endpoints for procedures. Those generated routes are the canonical service APIs, and other services are expected to call them through generated clients rather than through ad hoc private runtime APIs.
 
-CoolStack will not authenticate users. Instead, applications must provide a `CoolContext` representing the already-authenticated request identity. CoolStack will enforce authorization policies using this context.
+CrateStack will not authenticate users. Instead, applications must provide a `CoolContext` representing the already-authenticated request identity. CrateStack will enforce authorization policies using this context.
 
-CoolStack will support procedures as first-class schema declarations. Applications will implement generated Rust procedure traits. Procedure-level permissions will be checked before the application procedure implementation is called. Handwritten special endpoints are out of scope for the framework philosophy; non-CRUD operations should be declared as procedures.
+CrateStack will support procedures as first-class schema declarations. Applications will implement generated Rust procedure traits. Procedure-level permissions will be checked before the application procedure implementation is called. Handwritten special endpoints are out of scope for the framework philosophy; non-CRUD operations should be declared as procedures.
 
-CoolStack will enforce default-deny authorization semantics. No matching allow rule means the operation is denied.
+CrateStack will enforce default-deny authorization semantics. No matching allow rule means the operation is denied.
 
-CoolStack v0 will not provide `as_system` or any equivalent policy-bypass API.
+CrateStack v0 will not provide `as_system` or any equivalent policy-bypass API.
 
-CoolStack will not hard-code JSON into the REST layer. Instead, generated handlers will use a `CoolCodec` trait for body encoding and decoding. JSON and CBOR will both be first-class codec crates, while generated services decide which codecs are enabled.
+CrateStack will not hard-code JSON into the REST layer. Instead, generated handlers will use a `CoolCodec` trait for body encoding and decoding. JSON and CBOR will both be first-class codec crates, while generated services decide which codecs are enabled.
 
 COSE will be modeled separately from body encoding through a `CoolEnvelope` trait. The envelope layer wraps encoded bytes and can verify, decrypt, sign, encrypt, or MAC request/response bodies.
 
@@ -157,7 +157,7 @@ async fn main() -> anyhow::Result<()> {
 
 ## ORM Backend
 
-CoolStack v0 will use:
+CrateStack v0 will use:
 
 * `sqlx::PgPool`
 * `sqlx::Postgres`
@@ -188,7 +188,7 @@ let posts = cool
 
 ## REST Transport
 
-CoolStack v0 will generate conventional REST CRUD endpoints:
+CrateStack v0 will generate conventional REST CRUD endpoints:
 
 ```text
 GET    /posts
@@ -198,7 +198,7 @@ PATCH  /posts/:id
 DELETE /posts/:id
 ```
 
-For procedures, CoolStack v0 will generate POST endpoints:
+For procedures, CrateStack v0 will generate POST endpoints:
 
 ```text
 POST /$procs/{procedureName}
@@ -229,7 +229,7 @@ mutation procedure publishPost(args: PublishPostInput): Post
   @allow(auth().role == "admin")
 ```
 
-CoolStack generates a Rust trait:
+CrateStack generates a Rust trait:
 
 ```rust
 #[async_trait::async_trait]
@@ -280,7 +280,7 @@ type Image {
 }
 ```
 
-For fields marked with `@custom`, CoolStack generates resolver trait methods that applications implement to derive the field value from the source object and request context.
+For fields marked with `@custom`, CrateStack generates resolver trait methods that applications implement to derive the field value from the source object and request context.
 
 Initial v0 scope:
 
@@ -306,7 +306,7 @@ Generated Rust clients should expose both:
 
 ## Authorization Model
 
-CoolStack owns authorization, not authentication.
+CrateStack owns authorization, not authentication.
 
 The host application or framework owns:
 
@@ -317,7 +317,7 @@ The host application or framework owns:
 * OAuth
 * user lookup
 
-CoolStack consumes:
+CrateStack consumes:
 
 ```rust
 pub struct CoolContext {
@@ -361,7 +361,7 @@ Read, update, and delete policies should be injected into SQL where possible. Cr
 
 ## No System Bypass in v0
 
-CoolStack v0 will not expose:
+CrateStack v0 will not expose:
 
 ```rust
 db.as_system()
@@ -375,9 +375,9 @@ A future ADR may revisit privileged operations after the base policy model is ma
 
 ## Codec Layer
 
-CoolStack generated REST handlers will not assume JSON.
+CrateStack generated REST handlers will not assume JSON.
 
-Instead, CoolStack defines:
+Instead, CrateStack defines:
 
 ```rust
 pub trait CoolCodec: Clone + Send + Sync + 'static {
@@ -414,7 +414,7 @@ This allows codecs to operate generically over generated model, input, output, a
 
 COSE is not a codec. COSE wraps encoded bytes.
 
-CoolStack defines:
+CrateStack defines:
 
 ```rust
 pub trait CoolEnvelope: Clone + Send + Sync + 'static {
@@ -466,7 +466,7 @@ Rust value -> codec.encode -> envelope.seal_response -> HTTP body
 
 ## Crate Layout
 
-CoolStack v0 will use a multi-crate workspace:
+CrateStack v0 will use a multi-crate workspace:
 
 ```text
 coolstack/
@@ -559,7 +559,7 @@ This alternative may still be useful later as a debugging or build optimization 
 
 ## Alternative 2: Build a Runtime Schema Interpreter
 
-CoolStack could parse `.cool` at runtime and dynamically serve APIs.
+CrateStack could parse `.cool` at runtime and dynamically serve APIs.
 
 Rejected because:
 
@@ -575,14 +575,14 @@ Diesel offers strong compile-time query guarantees.
 
 Rejected for v0 because:
 
-* CoolStack needs dynamic query generation for filters and policy injection
+* CrateStack needs dynamic query generation for filters and policy injection
 * SQLx has straightforward async support
 * SQLx integrates naturally with Axum/Tokio services
 * SQLx `QueryBuilder` is well suited to generated dynamic SQL
 
 ## Alternative 4: Assume JSON and Add CBOR Later
 
-CoolStack could start with JSON as the default HTTP format and later add CBOR.
+CrateStack could start with JSON as the default HTTP format and later add CBOR.
 
 Rejected because JSON is explicitly unacceptable for some target projects. If JSON is baked into handlers early, removing that assumption later would be expensive.
 
@@ -590,7 +590,7 @@ The correct abstraction is a codec trait from v0.
 
 ## Alternative 5: Treat COSE as a Codec
 
-CoolStack could expose `application/cose` as just another codec.
+CrateStack could expose `application/cose` as just another codec.
 
 Rejected because COSE is an envelope over bytes, while CBOR is a serialization format. Treating COSE as a codec would mix serialization, signing, verification, encryption, and application data decoding into one layer.
 
@@ -609,7 +609,7 @@ Rejected for v0 because this creates a high risk of accidental data exposure. Pr
 
 ## Alternative 7: Add `as_system` in v0
 
-CoolStack could provide:
+CrateStack could provide:
 
 ```rust
 db.as_system()
@@ -621,7 +621,7 @@ Rejected for v0 because the permission model should be proven first. A future AD
 
 Procedures could be exposed through RPC-style endpoints.
 
-Rejected because CoolStack v0 is explicitly REST-only. Procedures are exposed over REST as POST endpoints, not as an RPC protocol.
+Rejected because CrateStack v0 is explicitly REST-only. Procedures are exposed over REST as POST endpoints, not as an RPC protocol.
 
 ## Decision Drivers
 
@@ -667,4 +667,4 @@ Potential future ADRs:
 
 ## Final Decision Statement
 
-CoolStack v0 will be a macro-first, schema-first Rust framework layer that generates a SQLx-backed ORM, policy-protected REST CRUD routes, and REST procedure endpoints from `.cool` files. It will delegate authentication to the host application, enforce default-deny permissions, avoid system-level policy bypasses, and abstract HTTP body handling through codec and envelope traits so CBOR and COSE can be first-class without sacrificing general developer experience.
+CrateStack v0 will be a macro-first, schema-first Rust framework layer that generates a SQLx-backed ORM, policy-protected REST CRUD routes, and REST procedure endpoints from `.cool` files. It will delegate authentication to the host application, enforce default-deny permissions, avoid system-level policy bypasses, and abstract HTTP body handling through codec and envelope traits so CBOR and COSE can be first-class without sacrificing general developer experience.

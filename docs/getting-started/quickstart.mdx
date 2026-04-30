@@ -1,11 +1,11 @@
 ---
 title: Quickstart
-description: Minimal generic setup for consuming a CoolStack schema in Rust, with or without generated HTTP routes.
+description: Minimal generic setup for consuming a CrateStack schema in Rust, with or without generated HTTP routes.
 ---
 
 # Quickstart
 
-This page is the smallest generic setup path for trying CoolStack in a Rust service.
+This page is the smallest generic setup path for trying CrateStack in a Rust service.
 
 ## 1. Include A Schema
 
@@ -24,7 +24,7 @@ let cool = coolstack_schema::Coolstack::builder(pool).build();
 
 ## 3. Use Delegates Directly
 
-You can use CoolStack without mounting the generated REST layer.
+You can use CrateStack without mounting the generated REST layer.
 
 ```rust
 let visible_posts = cool

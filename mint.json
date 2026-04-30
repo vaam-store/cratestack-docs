@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/schema.json",
-  "name": "CoolStack",
+  "name": "CrateStack",
   "theme": "mint",
   "navigation": [
     {

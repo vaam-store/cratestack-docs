@@ -1,4 +1,4 @@
-# CoolStack Package Selection and Dependency Decision Log
+# CrateStack Package Selection and Dependency Decision Log
 
 ## Status
 
@@ -10,7 +10,7 @@ Accepted for the initial workspace bootstrap. Some crates remain intentionally d
 
 ## Scope
 
-This document records the current package and dependency decisions for CoolStack v0.
+This document records the current package and dependency decisions for CrateStack v0.
 
 It covers:
 
@@ -31,7 +31,7 @@ This is not a lockfile. Exact patch versions should be controlled by `Cargo.lock
 
 ## 1. Dependency Philosophy
 
-CoolStack should be dependency-conscious but not dependency-minimal at the cost of correctness or developer experience.
+CrateStack should be dependency-conscious but not dependency-minimal at the cost of correctness or developer experience.
 
 Dependency choices should optimize for:
 
@@ -45,7 +45,7 @@ Dependency choices should optimize for:
 8. avoiding JSON as a core assumption
 9. keeping optional features optional
 
-CoolStack should avoid pulling heavy dependencies into core when they are only needed for a specific integration.
+CrateStack should avoid pulling heavy dependencies into core when they are only needed for a specific integration.
 
 Core should stay transport- and framework-light where possible.
 
@@ -188,7 +188,7 @@ thiserror = "2"
 
 Rationale:
 
-CoolStack is a library. `thiserror` is better than `anyhow` for public error types because it preserves structured error variants.
+CrateStack is a library. `thiserror` is better than `anyhow` for public error types because it preserves structured error variants.
 
 Decision:
 
@@ -220,7 +220,7 @@ anyhow = "1"
 
 Rationale:
 
-`anyhow` is convenient for binaries and examples, but should not be used as the main public error surface of CoolStack library crates.
+`anyhow` is convenient for binaries and examples, but should not be used as the main public error surface of CrateStack library crates.
 
 Decision:
 
@@ -359,7 +359,7 @@ tokio = { version = "1", features = ["full"] }
 
 Rationale:
 
-CoolStack v0 is Axum-first and SQLx-backed; Tokio is the natural runtime.
+CrateStack v0 is Axum-first and SQLx-backed; Tokio is the natural runtime.
 
 Decision:
 
@@ -440,7 +440,7 @@ Notes:
 
 Rationale:
 
-SQLx provides mature async database access and fits Axum/Tokio applications well. CoolStack needs dynamic query construction for filters and policy injection, making SQLx `QueryBuilder` a good match.
+SQLx provides mature async database access and fits Axum/Tokio applications well. CrateStack needs dynamic query construction for filters and policy injection, making SQLx `QueryBuilder` a good match.
 
 Decision:
 
@@ -459,7 +459,7 @@ Purpose considered:
 
 Rationale for deferral:
 
-CoolStack v0 targets PostgreSQL only. SQLx `QueryBuilder` is sufficient for v0 dynamic SQL generation. Adding SeaQuery now would add another abstraction layer before the SQL model is stable.
+CrateStack v0 targets PostgreSQL only. SQLx `QueryBuilder` is sufficient for v0 dynamic SQL generation. Adding SeaQuery now would add another abstraction layer before the SQL model is stable.
 
 Decision:
 
@@ -478,7 +478,7 @@ Purpose considered:
 
 Rationale for rejection:
 
-CoolStack needs generated dynamic filters, policy injection, and REST-driven query construction. SQLx provides a more direct async execution model for this architecture.
+CrateStack needs generated dynamic filters, policy injection, and REST-driven query construction. SQLx provides a more direct async execution model for this architecture.
 
 Decision:
 
@@ -497,7 +497,7 @@ Purpose considered:
 
 Rationale for rejection:
 
-CoolStack itself is an ORM/codegen layer. Depending on another ORM would blur responsibility and restrict policy/query generation control.
+CrateStack itself is an ORM/codegen layer. Depending on another ORM would blur responsibility and restrict policy/query generation control.
 
 Decision:
 
@@ -571,7 +571,7 @@ tower = "0.5"
 
 Rationale:
 
-Axum is Tower-based. CoolStack integrations may need Tower layers for context propagation, request processing, or middleware helpers.
+Axum is Tower-based. CrateStack integrations may need Tower layers for context propagation, request processing, or middleware helpers.
 
 Decision:
 
@@ -592,7 +592,7 @@ Purpose considered:
 
 Rationale for deferral:
 
-These are application-level concerns and should not be forced into CoolStack core. Examples may use `tower-http`, but generated routes should not require it.
+These are application-level concerns and should not be forced into CrateStack core. Examples may use `tower-http`, but generated routes should not require it.
 
 Decision:
 
@@ -625,7 +625,7 @@ chumsky = "0.10"
 
 Rationale:
 
-CoolStack needs a custom schema language with good diagnostics. Chumsky is well suited for expressive parser construction and error recovery.
+CrateStack needs a custom schema language with good diagnostics. Chumsky is well suited for expressive parser construction and error recovery.
 
 Decision:
 
@@ -854,7 +854,7 @@ Status: ADOPT
 Purpose:
 
 * CBOR encoding and decoding through Serde
-* first-class CoolStack codec implementation
+* first-class CrateStack codec implementation
 
 Used by:
 
@@ -900,7 +900,7 @@ serde_json = "1"
 
 Rationale:
 
-Some developers may want JSON. However, JSON must not be required by CoolStack core and must not be assumed by generated handlers.
+Some developers may want JSON. However, JSON must not be required by CrateStack core and must not be assumed by generated handlers.
 
 Decision:
 
@@ -937,7 +937,7 @@ Purpose considered:
 
 Rationale:
 
-CoolStack uses `minicbor-serde` for Serde-based CBOR transport and keeps `minicbor` available as the underlying low-level codec when sequence-aware or lower-level CBOR handling is needed.
+CrateStack uses `minicbor-serde` for Serde-based CBOR transport and keeps `minicbor` available as the underlying low-level codec when sequence-aware or lower-level CBOR handling is needed.
 
 Decision:
 
@@ -969,7 +969,7 @@ coset = "0.4"
 
 Rationale:
 
-Coset provides Rust types for COSE and builds on Ciborium. It gives CoolStack a structured way to implement COSE envelope modes without treating COSE as a codec.
+Coset provides Rust types for COSE and builds on Ciborium. It gives CrateStack a structured way to implement COSE envelope modes without treating COSE as a codec.
 
 Decision:
 
@@ -996,7 +996,7 @@ sha2 = "0.10"
 
 Rationale:
 
-Coset models COSE structures but applications still need concrete cryptographic signing and verification implementations. CoolStack should not prematurely commit to a broad cryptography suite.
+Coset models COSE structures but applications still need concrete cryptographic signing and verification implementations. CrateStack should not prematurely commit to a broad cryptography suite.
 
 Decision:
 
@@ -1064,7 +1064,7 @@ secrecy = "0.10"
 
 Decision:
 
-Use in COSE key handling APIs if private key material is accepted directly by CoolStack-owned types.
+Use in COSE key handling APIs if private key material is accepted directly by CrateStack-owned types.
 
 ---
 
@@ -1088,7 +1088,7 @@ zeroize = "1"
 
 Decision:
 
-Use when CoolStack stores or manipulates secret key bytes.
+Use when CrateStack stores or manipulates secret key bytes.
 
 ---
 
@@ -1297,7 +1297,7 @@ insta = { version = "1", features = ["yaml"] }
 
 Rationale:
 
-CoolStack is a compiler/codegen project. Snapshot testing is highly valuable for generated output and diagnostics.
+CrateStack is a compiler/codegen project. Snapshot testing is highly valuable for generated output and diagnostics.
 
 Decision:
 
@@ -1738,7 +1738,7 @@ Required controls:
 2. Run RustSec advisory checks.
 3. Review cryptography dependencies before enabling COSE signing/encryption in production.
 4. Keep COSE key handling behind traits.
-5. Avoid storing secret key material in long-lived CoolStack structs unless necessary.
+5. Avoid storing secret key material in long-lived CrateStack structs unless necessary.
 6. Use `secrecy` and `zeroize` if private key bytes are handled.
 7. Snapshot-test policy SQL generation.
 8. Ensure all SQL uses bind parameters.
@@ -1844,7 +1844,7 @@ sha2 = "0.10"
 
 # 24. Final Dependency Decisions
 
-For CoolStack v0, the team should proceed with these major decisions:
+For CrateStack v0, the team should proceed with these major decisions:
 
 1. Use SQLx for database execution.
 2. Use Axum for REST integration.
@@ -1908,7 +1908,7 @@ The first repo implementation slice makes these choices explicit:
 
 # 25. Open Dependency Questions
 
-1. Should CoolStack standardize on `chrono` or `time` for `DateTime`?
+1. Should CrateStack standardize on `chrono` or `time` for `DateTime`?
 2. Should the root crate have default features or require explicit opt-in?
 3. Should `sqlx` macros be enabled in generated user dependencies or only in tests/examples?
 4. Should COSE v0 include a concrete Ed25519 implementation or only signer/verifier traits?
