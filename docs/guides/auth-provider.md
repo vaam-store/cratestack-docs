@@ -8,20 +8,20 @@ The host application is responsible for:
 * validating that material
 * projecting the authenticated principal into a CrateStack auth context
 
-The framework boundary for that is `coolstack::AuthProvider`.
+The framework boundary for that is `cratestack::AuthProvider`.
 
 ## Trait shape
 
 Implement one trait per host auth strategy:
 
 ```rust
-use coolstack::{AuthProvider, CoolContext, RequestContext};
+use cratestack::{AuthProvider, CoolContext, RequestContext};
 
 #[derive(Clone)]
 struct AppAuthProvider;
 
 impl AuthProvider for AppAuthProvider {
-    type Error = coolstack::CoolError;
+    type Error = cratestack::CoolError;
 
     fn authenticate(
         &self,
@@ -48,7 +48,7 @@ This keeps auth resolution outside generated handlers while avoiding direct depe
 Register the provider once when building generated routes:
 
 ```rust
-let router = coolstack_schema::axum::router(
+let router = cratestack_schema::axum::router(
     db,
     procedures,
     CborCodec,

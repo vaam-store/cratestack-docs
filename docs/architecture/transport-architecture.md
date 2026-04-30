@@ -8,7 +8,7 @@ Current implementation is narrower than this design:
 
 1. generated Axum routers currently enforce a single configured codec per router
 2. CBOR is the only first-party checked-in server codec crate today
-3. JSON support currently exists inline in `coolstack-client-rust` rather than as a dedicated codec crate
+3. JSON support currently exists inline in `cratestack-client-rust` rather than as a dedicated codec crate
 4. COSE remains an unimplemented envelope seam
 5. `application/cbor-seq` is not implemented yet
 
@@ -270,9 +270,9 @@ This document is intentionally ahead of the current checked-in implementation.
 Current repo reality:
 
 1. generated Axum routes currently validate `Accept` and `Content-Type` against one configured codec
-2. `coolstack-codec-cbor` is the only dedicated checked-in codec crate
-3. JSON codec support exists inline in `coolstack-client-rust`
-4. `coolstack-client-rust` and `coolstack-client-flutter` already expose runtime codec configuration for CBOR and JSON, but each client instance still operates as a single-codec transport client
+2. `cratestack-codec-cbor` is the only dedicated checked-in codec crate
+3. JSON codec support exists inline in `cratestack-client-rust`
+4. `cratestack-client-rust` and `cratestack-client-flutter` already expose runtime codec configuration for CBOR and JSON, but each client instance still operates as a single-codec transport client
 5. COSE envelope configuration exists as a reserved runtime option, but the runtime rejects it because implementation is missing
 
 ## Implementation Phasing

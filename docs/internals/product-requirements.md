@@ -7,7 +7,7 @@ CrateStack is a Rust-native, schema-first backend framework layer for building t
 Developers define their data model, authorization rules, field exposure directives, custom fields, and procedures in `.cool` schema files, then include them in Rust using:
 
 ```rust
-coolstack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cool");
 ```
 
 The macro generates a typed ORM client, canonical REST CRUD routes, procedure interfaces, request/response types, generated client metadata, and policy enforcement code. CrateStack uses `sqlx` behind the scenes for database access and supports pluggable transport composition so applications can use JSON, CBOR, sequence-aware transports such as `application/cbor-seq`, and future COSE envelopes without sacrificing developer experience.
@@ -106,23 +106,23 @@ flowchart LR
 ```
 
 ```rust
-coolstack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cool");
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let pool = sqlx::PgPool::connect(&std::env::var("DATABASE_URL")?).await?;
 
-    let cool = coolstack_schema::Coolstack::builder(pool)
-        .codec(coolstack_codec_cbor::CborCodec::default())
+    let cool = cratestack_schema::CrateStack::builder(pool)
+        .codec(cratestack_codec_cbor::CborCodec::default())
         .procedures(AppProcedures)
         .build();
 
     let app = axum::Router::new().nest(
         "/api",
-        coolstack_schema::axum::router(
+        cratestack_schema::axum::router(
             cool,
             AppProcedures,
-            coolstack_codec_cbor::CborCodec,
+            cratestack_codec_cbor::CborCodec,
             resolve_context,
         ),
     );
@@ -232,14 +232,14 @@ let visible_posts = cool
     .post()
     .find_many()
     .where_expr(
-        coolstack_schema::post::author()
+        cratestack_schema::post::author()
             .profile()
             .nickname()
             .eq("Zulu")
-            .and(coolstack_schema::post::published().is_true())
+            .and(cratestack_schema::post::published().is_true())
             .not(),
     )
-    .order_by(coolstack_schema::post::author().email().desc())
+    .order_by(cratestack_schema::post::author().email().desc())
     .run(&ctx)
     .await?;
 ```
@@ -294,10 +294,10 @@ Generated Rust trait:
 pub trait CoolProcedures: Send + Sync + 'static {
     async fn publish_post(
         &self,
-        db: &Coolstack,
-        ctx: &coolstack::CoolContext,
+        db: &CrateStack,
+        ctx: &cratestack::CoolContext,
         args: PublishPostInput,
-    ) -> Result<Post, coolstack::CoolError>;
+    ) -> Result<Post, cratestack::CoolError>;
 }
 ```
 
@@ -579,7 +579,7 @@ Semantic errors should produce compiler-style diagnostics that identify the file
 The primary integration point is:
 
 ```rust
-coolstack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cool");
 ```
 
 The macro must:
@@ -597,18 +597,18 @@ The macro must:
 Generated module name for v0:
 
 ```rust
-coolstack_schema
+cratestack_schema
 ```
 
 Generated surface:
 
 ```rust
-coolstack_schema::Coolstack
-coolstack_schema::routes
-coolstack_schema::models
-coolstack_schema::post
-coolstack_schema::user
-coolstack_schema::CoolProcedures
+cratestack_schema::CrateStack
+cratestack_schema::routes
+cratestack_schema::models
+cratestack_schema::post
+cratestack_schema::user
+cratestack_schema::CoolProcedures
 ```
 
 ---
@@ -829,10 +829,10 @@ Example:
 pub trait CoolProcedures: Send + Sync + 'static {
     async fn sign_up(
         &self,
-        db: &Coolstack,
-        ctx: &coolstack::CoolContext,
+        db: &CrateStack,
+        ctx: &cratestack::CoolContext,
         args: SignUpInput,
-    ) -> Result<User, coolstack::CoolError>;
+    ) -> Result<User, cratestack::CoolError>;
 }
 ```
 
@@ -841,7 +841,7 @@ pub trait CoolProcedures: Send + Sync + 'static {
 Applications register procedure implementations through the builder:
 
 ```rust
-let cool = Coolstack::builder(pool)
+let cool = CrateStack::builder(pool)
     .procedures(AppProcedures)
     .build();
 ```
@@ -1047,13 +1047,13 @@ Representative use-cases:
 Generated Rust helpers for the same nested projection contract now follow this shape:
 
 ```rust
-let selection = coolstack_schema::post::select()
+let selection = cratestack_schema::post::select()
     .id()
     .include_author_selected(
-        coolstack_schema::user::include_selection()
+        cratestack_schema::user::include_selection()
             .email()
             .include_profile_selected(
-                coolstack_schema::profile::include_selection().nickname(),
+                cratestack_schema::profile::include_selection().nickname(),
             ),
     );
 
@@ -1069,7 +1069,7 @@ Current generated Rust selection boundary:
 
 Recursive relation filters and first-pass relation-aware ordering use those explicit `@relation(fields:[...],references:[...])` declarations rather than foreign-key inference.
 
-To-many relations must use an explicit quantifier operator (`some`, `every`, or `none`) before the target field path. In this slice, relation-aware `sort` support follows nested to-one paths such as `sort=author.email` or `sort=author.profile.nickname`, missing related rows currently sort with explicit `NULLS LAST` behavior, and the model primary key is appended automatically as a deterministic tie-break when relation ordering is used without an explicit primary-key term. Any path that crosses a to-many relation remains unsupported for ordering. `fields` is validated against the generated scalar model fields for the requested resource, and `include` is validated as a declared relation path. Nested include paths now materialize on list and fetch routes, and `includeFields[path]` narrows the payload at each already-included relation path. Exact type-level projection and child-collection sort/pagination remain intentionally out of scope for this slice. Generated typed delegates expose the same supported relation filter and nested to-one ordering paths through both compatibility helpers such as `coolstack_schema::post::author::email_desc()` and `coolstack_schema::post::author::profile::nickname_eq(...)`, and a builder-style DSL such as `coolstack_schema::post::author().email().desc()`, `coolstack_schema::post::author().profile().nickname().eq(...)`, and `coolstack_schema::user::sessions().some().label().contains(...)` for `where_expr(...)` usage. Those builder expressions can now be combined directly with `.and(...)`, `.or(...)`, and `.not()`-equivalent grouping through `FilterExpr`, for example `post::author().profile().nickname().eq("Zulu").and(post::published().is_true()).or(post::title().contains("Draft"))`. The route grammar remains narrower than the full generated delegate surface where true: the typed delegate DSL still exposes composition through `where_expr(...)` and typed builders rather than every delegate capability being representable as route query syntax. Legacy `orderBy` remains accepted as a compatibility alias for `sort`, but new contract text and generated clients should prefer `sort`.
+To-many relations must use an explicit quantifier operator (`some`, `every`, or `none`) before the target field path. In this slice, relation-aware `sort` support follows nested to-one paths such as `sort=author.email` or `sort=author.profile.nickname`, missing related rows currently sort with explicit `NULLS LAST` behavior, and the model primary key is appended automatically as a deterministic tie-break when relation ordering is used without an explicit primary-key term. Any path that crosses a to-many relation remains unsupported for ordering. `fields` is validated against the generated scalar model fields for the requested resource, and `include` is validated as a declared relation path. Nested include paths now materialize on list and fetch routes, and `includeFields[path]` narrows the payload at each already-included relation path. Exact type-level projection and child-collection sort/pagination remain intentionally out of scope for this slice. Generated typed delegates expose the same supported relation filter and nested to-one ordering paths through both compatibility helpers such as `cratestack_schema::post::author::email_desc()` and `cratestack_schema::post::author::profile::nickname_eq(...)`, and a builder-style DSL such as `cratestack_schema::post::author().email().desc()`, `cratestack_schema::post::author().profile().nickname().eq(...)`, and `cratestack_schema::user::sessions().some().label().contains(...)` for `where_expr(...)` usage. Those builder expressions can now be combined directly with `.and(...)`, `.or(...)`, and `.not()`-equivalent grouping through `FilterExpr`, for example `post::author().profile().nickname().eq("Zulu").and(post::published().is_true()).or(post::title().contains("Draft"))`. The route grammar remains narrower than the full generated delegate surface where true: the typed delegate DSL still exposes composition through `where_expr(...)` and typed builders rather than every delegate capability being representable as route query syntax. Legacy `orderBy` remains accepted as a compatibility alias for `sort`, but new contract text and generated clients should prefer `sort`.
 
 Practical relation query examples:
 
@@ -1135,7 +1135,7 @@ Canonical error shape:
 pub struct CoolErrorResponse {
     pub code: String,
     pub message: String,
-    pub details: Option<coolstack::Value>,
+    pub details: Option<cratestack::Value>,
 }
 ```
 
@@ -1176,13 +1176,13 @@ pub trait CoolCodec: Clone + Send + Sync + 'static {
 v0 should provide:
 
 ```text
-coolstack-codec-cbor
+cratestack-codec-cbor
 ```
 
 JSON may exist as an optional crate:
 
 ```text
-coolstack-codec-json
+cratestack-codec-json
 ```
 
 But JSON must not be required by core.
@@ -1246,7 +1246,7 @@ NoEnvelope
 Optional crate provides:
 
 ```text
-coolstack-cose
+cratestack-cose
 ```
 
 Potential envelope implementations:
@@ -1308,7 +1308,7 @@ Auth identity should support dynamic field lookup:
 
 ```rust
 pub struct CoolAuthIdentity {
-    pub fields: BTreeMap<String, coolstack::Value>,
+    pub fields: BTreeMap<String, cratestack::Value>,
 }
 ```
 
@@ -1334,35 +1334,35 @@ Framework integrations should extract or construct `CoolContext` from request ex
 Recommended workspace:
 
 ```text
-coolstack/
+cratestack/
   crates/
-    coolstack/
+    cratestack/
       // user-facing runtime crate and re-exports
-    coolstack-macros/
+    cratestack-macros/
       // include_schema! proc macro
-    coolstack-parser/
+    cratestack-parser/
       // .cool parser
-    coolstack-core/
+    cratestack-core/
       // AST, IR, validation, value model
-    coolstack-policy/
+    cratestack-policy/
       // policy expression handling and SQL compilation
-    coolstack-sqlx/
+    cratestack-sqlx/
       // SQLx backend
-    coolstack-axum/
+    cratestack-axum/
       // Axum REST integration
-    coolstack-codec-cbor/
+    cratestack-codec-cbor/
       // CBOR codec
-    coolstack-cli/
+    cratestack-cli/
       // human-facing CLI plus machine-readable diagnostics
-    coolstack-lsp/
+    cratestack-lsp/
       // standalone language server for .cool files
-    coolstack-codec-json/
+    cratestack-codec-json/
       // optional JSON codec
-    coolstack-cose/
+    cratestack-cose/
       // optional COSE envelope support
   packages/
-    coolstack-vscode/
-      // thin VS Code wrapper that launches coolstack-lsp
+    cratestack-vscode/
+      // thin VS Code wrapper that launches cratestack-lsp
 ```
 
 ## 9.2 Generated Code Structure
@@ -1370,8 +1370,8 @@ coolstack/
 `include_schema!` generates:
 
 ```rust
-pub mod coolstack_schema {
-    pub struct Coolstack { ... }
+pub mod cratestack_schema {
+    pub struct CrateStack { ... }
 
     pub mod models { ... }
     pub mod fields { ... }
@@ -1383,7 +1383,7 @@ pub mod coolstack_schema {
     pub use models::*;
     pub use procedures::*;
 
-    pub fn routes(cool: Coolstack) -> axum::Router { ... }
+    pub fn routes(cool: CrateStack) -> axum::Router { ... }
 }
 ```
 
@@ -1475,12 +1475,12 @@ RETURNING columns
 ## 10.1 Application Setup
 
 ```rust
-coolstack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cool");
 
 pub struct AppProcedures;
 
 #[async_trait::async_trait]
-impl coolstack_schema::CoolProcedures for AppProcedures {
+impl cratestack_schema::CoolProcedures for AppProcedures {
     // generated required methods
 }
 
@@ -1488,14 +1488,14 @@ impl coolstack_schema::CoolProcedures for AppProcedures {
 async fn main() -> anyhow::Result<()> {
     let pool = sqlx::PgPool::connect(&std::env::var("DATABASE_URL")?).await?;
 
-    let cool = coolstack_schema::Coolstack::builder(pool)
-        .codec(coolstack_codec_cbor::CborCodec::default())
-        .envelope(coolstack::NoEnvelope::default())
+    let cool = cratestack_schema::CrateStack::builder(pool)
+        .codec(cratestack_codec_cbor::CborCodec::default())
+        .envelope(cratestack::NoEnvelope::default())
         .procedures(AppProcedures)
         .build();
 
     let app = axum::Router::new()
-        .nest("/api", coolstack_schema::routes(cool));
+        .nest("/api", cratestack_schema::routes(cool));
 
     Ok(())
 }
@@ -1504,9 +1504,9 @@ async fn main() -> anyhow::Result<()> {
 ## 10.2 COSE Setup
 
 ```rust
-let cool = coolstack_schema::Coolstack::builder(pool)
-    .codec(coolstack_codec_cbor::CborCodec::default())
-    .envelope(coolstack_cose::CoseSign1Envelope::new(verifier, signer))
+let cool = cratestack_schema::CrateStack::builder(pool)
+    .codec(cratestack_codec_cbor::CborCodec::default())
+    .envelope(cratestack_cose::CoseSign1Envelope::new(verifier, signer))
     .procedures(AppProcedures)
     .build();
 ```
@@ -1703,7 +1703,7 @@ The current repo slice completes Milestone 0 plus a narrow parser/macro/codec/CL
 
 Current implementation note:
 
-The current repo slice now also starts Milestone 4 with `coolstack-sqlx`, generated model structs, generated type structs, generated create/update input structs, a schema-specific `Coolstack` wrapper, and delegate scaffolding for `create`, `find_many`, `find_unique`, `update`, and `delete`.
+The current repo slice now also starts Milestone 4 with `cratestack-sqlx`, generated model structs, generated type structs, generated create/update input structs, a schema-specific `CrateStack` wrapper, and delegate scaffolding for `create`, `find_many`, `find_unique`, `update`, and `delete`.
 
 Current limitations:
 
@@ -1719,15 +1719,15 @@ Current limitations:
 * Create policies are evaluated against generated input values plus auth context before insertion, while update/delete policies are injected into SQL row scoping; create-time auth-derived defaults now support the narrow `@default(auth().field)` form before create-policy evaluation.
 * DB-backed policy integration coverage now exists behind an env-gated test path using `COOLSTACK_TEST_DATABASE_URL`.
 * The current executable auth/policy capability matrix now lives in `../reference/auth-support-matrix.md`.
-* Procedure-level policy execution now exists through generated runtime wrappers under `coolstack_schema::procedures::*` and reuses canonical policy types from `coolstack-policy`.
+* Procedure-level policy execution now exists through generated runtime wrappers under `cratestack_schema::procedures::*` and reuses canonical policy types from `cratestack-policy`.
 * The current procedure-policy subset now supports grouped `&&` / `||`, `auth() == null`, nested `args.<field>` access, input-vs-auth comparisons, and input-vs-input comparisons, but it still does not expose a general DB-querying procedure policy language.
 * Generated procedure registry traits now exist and provide the first narrow execution contract for procedure implementations.
-* Model-level `@@emit(...)` directives now support the narrow `created`, `updated`, and `deleted` event set, generated typed subscription helpers under `coolstack_schema::events`, transactional outbox writes inside generated SQLx mutations, and explicit `coolstack_schema::events().drain()` style replay/drain hooks for in-process delivery.
+* Model-level `@@emit(...)` directives now support the narrow `created`, `updated`, and `deleted` event set, generated typed subscription helpers under `cratestack_schema::events`, transactional outbox writes inside generated SQLx mutations, and explicit `cratestack_schema::events().drain()` style replay/drain hooks for in-process delivery.
 * Generated Axum procedure routes now exist for procedure invocation and enforce procedure policy checks plus delegated `@authorize(...)` checks before handler execution.
 * Generated Axum model routes now exist for `GET /{modelPlural}`, `GET /{modelPlural}/{id}`, `POST /{modelPlural}`, `PATCH /{modelPlural}/{id}`, and `DELETE /{modelPlural}/{id}` and reuse the same codec/context/policy pattern.
 * The generated HTTP layer now enforces a single configured codec per router for `Accept` and `Content-Type`, returning `406 Not Acceptable` and `415 Unsupported Media Type` for mismatches.
 * The current HTTP model slice is still intentionally narrow: list routes now expose canonical `fields`, shallow declared-relation `include`, relation-specific `includeFields[relation]`, canonical `sort`, `limit`, `offset`, scalar equality filters, a small operator suffix set (`__ne`, `__lt`, `__lte`, `__gt`, `__gte`, `__in`, `__contains`, `__startsWith`, `__isNull`) with `cuid`, UUID, and DateTime parsing, canonical grouped `where=` expressions with `not(...)` > `,` (AND) > `|` (OR) precedence and left-associative chaining, and recursive relation filters backed by explicit `@relation(fields:[...],references:[...])` metadata, with to-many traversal requiring explicit `some` / `every` / `none` quantifiers and any to-many `sort` path remaining unsupported. Legacy `orderBy` is still accepted only as a compatibility alias. The route grammar remains narrower than the full generated delegate/runtime filter surface, while write routes forward directly into the generated delegate/runtime layer without a richer request DSL.
-* `coolstack/compose.yml` now provides a local PostgreSQL 18 instance for driving DB-backed tests through `COOLSTACK_TEST_DATABASE_URL`.
+* `cratestack/compose.yml` now provides a local PostgreSQL 18 instance for driving DB-backed tests through `COOLSTACK_TEST_DATABASE_URL`.
 * Arbitrary policy functions, explicit impersonation/acting-as semantics, and a general DB-querying procedure policy language remain future work.
 
 ## Milestone 0: Project Skeleton
@@ -1771,7 +1771,7 @@ Deliverables:
 * generated model structs
 * generated input structs
 * generated procedure trait
-* generated basic `Coolstack` type
+* generated basic `CrateStack` type
 
 ## Milestone 4: SQLx ORM
 
@@ -1845,8 +1845,8 @@ Deliverables:
 CrateStack v0 is successful when a developer can:
 
 1. Create a `.cool` schema with models, policies, types, and procedures.
-2. Include it with `coolstack::include_schema!("schema.cool")`.
-3. Instantiate the generated `Coolstack` type with a SQLx PostgreSQL pool.
+2. Include it with `cratestack::include_schema!("schema.cool")`.
+3. Instantiate the generated `CrateStack` type with a SQLx PostgreSQL pool.
 4. Register procedure implementations.
 5. Use the generated ORM client in Rust.
 6. Mount generated Axum REST routes.
@@ -1865,7 +1865,7 @@ CrateStack v0 is successful when a developer can:
 
 1. Should procedure endpoints use `/api/$procs/name`, `/api/_procedures/name`, or `/api/actions/name`?
 2. Should read-like procedures ever support GET, or should v0 require POST for all procedures?
-3. Should the generated schema module always be named `coolstack_schema`, or should the macro allow custom names?
+3. Should the generated schema module always be named `cratestack_schema`, or should the macro allow custom names?
 4. Should codec selection be per-router, per-request, or compile-time feature based?
 5. Should COSE verification be allowed to populate `CoolContext.auth`, or only transport metadata?
 6. Should migrations be included in v0 or deferred?
@@ -1891,7 +1891,7 @@ For v0, make these decisions explicit:
 9. Keep authentication entirely external.
 10. Use default-deny permission semantics.
 11. Do not implement `as_system`.
-12. Generate a fixed `coolstack_schema` module in v0.
+12. Generate a fixed `cratestack_schema` module in v0.
 13. Keep plugin architecture narrow: codec, envelope, auth/context extraction, and later hooks.
 
 ---

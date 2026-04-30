@@ -18,14 +18,14 @@ Model policies:
 * action names support `list`, `detail`, `read`, `create`, `update`, `delete`, and `all`
 * deny wins over allow
 * if no matching allow rule exists, access is denied
-* canonical model-policy literals, predicates, and expressions now live in `coolstack-policy`
+* canonical model-policy literals, predicates, and expressions now live in `cratestack-policy`
 
 Procedure policies:
 
 * `@allow(...)` and `@deny(...)` are supported
 * deny wins over allow
 * if no allow rule exists, invocation is denied
-* canonical procedure-policy literals, predicates, and expressions now live in `coolstack-policy`
+* canonical procedure-policy literals, predicates, and expressions now live in `cratestack-policy`
 
 Auth-derived defaults:
 
@@ -334,7 +334,7 @@ Notes:
 
 * nested auth lookups traverse structured auth objects carried in `CoolContext`
 * `CoolContext` now carries a first-class `principal.actor/session/tenant/claims` shape internally
-* canonical policy types are shared through `coolstack-policy`; model and procedure auth now lower onto the same runtime policy surface
+* canonical policy types are shared through `cratestack-policy`; model and procedure auth now lower onto the same runtime policy surface
 * an exact auth key still wins before dotted traversal, so existing flat claims stay backward compatible
 
 ### Built-in role and tenant checks
@@ -403,11 +403,11 @@ Current security posture is intentionally conservative:
 
 Current coverage for the supported matrix lives primarily in:
 
-* `coolstack/crates/coolstack/tests/include_schema.rs`
-* `coolstack/crates/coolstack/tests/policy_db.rs`
-* `coolstack/crates/coolstack/tests/policy_db_advanced.rs`
-* `coolstack/crates/coolstack/tests/policy_db_auth_engine.rs`
-* `coolstack/crates/coolstack/tests/policy_db_recursive.rs`
+* `cratestack/crates/cratestack/tests/include_schema.rs`
+* `cratestack/crates/cratestack/tests/policy_db.rs`
+* `cratestack/crates/cratestack/tests/policy_db_advanced.rs`
+* `cratestack/crates/cratestack/tests/policy_db_auth_engine.rs`
+* `cratestack/crates/cratestack/tests/policy_db_recursive.rs`
 
 Those tests cover:
 

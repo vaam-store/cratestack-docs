@@ -1,0 +1,38 @@
+---
+title: Release Track
+description: Current documentation track, stability expectations, and how to interpret future-facing naming.
+---
+
+# Release Track
+
+## Active Track
+
+The current public docs are organized as the `v0` track for CrateStack.
+
+Use this track as:
+
+1. the primary reference for public naming and package layout
+2. the main source for future-facing examples
+3. the place where current implementation boundaries are recorded honestly
+
+## Naming Note
+
+These docs already use the public `cratestack` naming.
+
+The current implementation workspace in this repo still lives under the historical `coolstack/` name, so some code and file paths in the checked-in repository have not caught up to the public docs branding yet.
+
+## Stability Guide
+
+Read sections this way:
+
+1. `overview/` and `getting-started/` are product entrypoints
+2. `guides/`, `architecture/`, and `reference/` are the main product docs
+3. `internals/` captures ADRs, PRD material, and decision history that may still lead implementation
+
+## Next Versioning Step
+
+When extraction and publishing are complete, the next natural docs move is:
+
+1. keep `v0` as the stable baseline
+2. introduce a preview or next track for unreleased changes
+3. align the public examples with the renamed extracted codebase end-to-end

@@ -29,7 +29,7 @@ Verified current state in this repo:
 
 Important generator constraints already observed in this repo:
 
-* `coolstack::include_schema!` is compile-time codegen, so schema problems can appear as a slow or seemingly stuck `cargo build`, not just as a clean validation error.
+* `cratestack::include_schema!` is compile-time codegen, so schema problems can appear as a slow or seemingly stuck `cargo build`, not just as a clean validation error.
 * Reverse relations that are not needed by the generated API can trigger large relation-order and relation-filter expansion costs. Prefer the smallest relation graph that still supports the generated routes and includes you actually use.
 * Do not name schema models or types after common Rust prelude/container names such as `Option`, `Result`, `String`, or `Vec`. Generated code may resolve those names as schema models instead of Rust standard library types.
 
@@ -41,14 +41,14 @@ Implication:
 
 ## Editor Setup
 
-For `.cool` authoring in VS Code, prefer the first-party extension under `coolstack/packages/coolstack-vscode` plus the standalone `coolstack-lsp` binary.
+For `.cool` authoring in VS Code, prefer the first-party extension under `cratestack/packages/cratestack-vscode` plus the standalone `cratestack-lsp` binary.
 
 Minimal local setup:
 
-1. From `coolstack/`, run `cargo build -p coolstack-lsp`.
-2. From `coolstack/packages/coolstack-vscode`, run `pnpm install` if needed.
+1. From `cratestack/`, run `cargo build -p cratestack-lsp`.
+2. From `cratestack/packages/cratestack-vscode`, run `pnpm install` if needed.
 3. Install or run the extension.
-4. If the server is not already bundled or on `PATH`, set `coolstack.lsp.path` to the built binary.
+4. If the server is not already bundled or on `PATH`, set `cratestack.lsp.path` to the built binary.
 
 For Rust-side autocomplete and hovers on generated `include_schema!` APIs, keep `rust-analyzer.procMacro.enable` on and point VS Code at the Cargo workspaces that compile the real schema consumer.
 
@@ -168,10 +168,10 @@ Why this slice stays intentionally small:
 
 ## Step 2: Validate The Schema
 
-From `coolstack/`:
+From `cratestack/`:
 
 ```bash
-cargo run -p coolstack-cli -- check \
+cargo run -p cratestack-cli -- check \
   --schema "../vaam-backends/services/catalog-service/schema/catalog.cool"
 ```
 
@@ -180,7 +180,7 @@ If this passes, CrateStack can consume the schema for both generated client path
 If you need machine-readable diagnostics for editor fallback or CI glue, use:
 
 ```bash
-cargo run -p coolstack-cli -- check \
+cargo run -p cratestack-cli -- check \
   --schema "../vaam-backends/services/catalog-service/schema/catalog.cool" \
   --format json
 ```
@@ -191,7 +191,7 @@ Then immediately verify the real compile path from `vaam-backends/`:
 cargo build -p catalog-service
 ```
 
-Use this extra build step as a required guardrail, not an optional smoke test. `coolstack-cli -- check` validates schema structure, but it does not prove that the full Rust proc-macro expansion remains cheap enough or avoids Rust name collisions.
+Use this extra build step as a required guardrail, not an optional smoke test. `cratestack-cli -- check` validates schema structure, but it does not prove that the full Rust proc-macro expansion remains cheap enough or avoids Rust name collisions.
 
 ## Step 3: Create The Mobile Rust Consumer Crate
 
@@ -211,8 +211,8 @@ edition = "2024"
 publish = false
 
 [dependencies]
-coolstack = { path = "../../../../coolstack/crates/coolstack" }
-coolstack-client-rust = { path = "../../../../coolstack/crates/coolstack-client-rust" }
+coolstack = { path = "../../../../cratestack/crates/coolstack" }
+cratestack-client-rust = { path = "../../../../cratestack/crates/cratestack-client-rust" }
 serde = { version = "1", features = ["derive"] }
 ```
 
@@ -220,7 +220,7 @@ Recommended `src/lib.rs`:
 
 ```rust
 pub mod catalog_client {
-    coolstack::include_schema!("../../../../vaam-backends/services/catalog-service/schema/catalog.cool");
+    cratestack::include_schema!("../../../../vaam-backends/services/catalog-service/schema/catalog.cool");
 }
 ```
 
@@ -236,11 +236,11 @@ What this gives you today:
 Example usage from this crate itself:
 
 ```rust
-use coolstack::client_rust::CoolstackClient;
+use cratestack::client_rust::CrateStackClient;
 
 pub async fn fetch_product_example(
-    runtime: CoolstackClient,
-) -> Result<catalog_client::Product, coolstack::client_rust::ClientError> {
+    runtime: CrateStackClient,
+) -> Result<catalog_client::Product, cratestack::client_rust::ClientError> {
     let client = catalog_client::client::Client::new(runtime);
     client.products().get(&"prod_123".to_owned(), &[]).await
 }
@@ -275,12 +275,12 @@ catalog_schema_rust = { path = "../catalog-schema-rust" }
 Example usage inside `vaam_runtime/src/lib.rs`:
 
 ```rust
-use coolstack::client_rust::{ClientConfig, CoolstackClient};
+use cratestack::client_rust::{ClientConfig, CrateStackClient};
 use catalog_schema_rust::catalog_client;
 use url::Url;
 
-pub async fn fetch_catalog_product() -> Result<(), coolstack::client_rust::ClientError> {
-    let runtime = CoolstackClient::cbor(ClientConfig::new(
+pub async fn fetch_catalog_product() -> Result<(), cratestack::client_rust::ClientError> {
+    let runtime = CrateStackClient::cbor(ClientConfig::new(
         Url::parse("https://catalog.example.test").expect("valid url"),
     ));
 
@@ -327,13 +327,13 @@ Generated CrateStack routers no longer need a route-local context resolver closu
 Example from `vaam-backends/services/catalog-service/src/lib.rs`:
 
 ```rust
-use coolstack::{AuthProvider, CoolContext, RequestContext, Value};
+use cratestack::{AuthProvider, CoolContext, RequestContext, Value};
 
 #[derive(Clone)]
 struct CatalogAuthProvider;
 
 impl AuthProvider for CatalogAuthProvider {
-    type Error = coolstack::CoolError;
+    type Error = cratestack::CoolError;
 
     fn authenticate(
         &self,
@@ -344,7 +344,7 @@ impl AuthProvider for CatalogAuthProvider {
         if let Some(role) = request.headers.get("x-role") {
             let role = role
                 .to_str()
-                .map_err(|error| coolstack::CoolError::BadRequest(error.to_string()));
+                .map_err(|error| cratestack::CoolError::BadRequest(error.to_string()));
             match role {
                 Ok(role) => fields.push(("role".to_owned(), Value::String(role.to_owned()))),
                 Err(error) => return core::future::ready(Err(error)),
@@ -354,7 +354,7 @@ impl AuthProvider for CatalogAuthProvider {
         if let Some(id) = request.headers.get("x-auth-id") {
             let id = id
                 .to_str()
-                .map_err(|error| coolstack::CoolError::BadRequest(error.to_string()));
+                .map_err(|error| cratestack::CoolError::BadRequest(error.to_string()));
             match id {
                 Ok(id) => fields.push(("id".to_owned(), Value::String(id.to_owned()))),
                 Err(error) => return core::future::ready(Err(error)),
@@ -373,7 +373,7 @@ impl AuthProvider for CatalogAuthProvider {
 Register it once when building the generated router:
 
 ```rust
-let router = coolstack_schema::axum::router(
+let router = cratestack_schema::axum::router(
     db,
     CatalogProcedures { state: state.clone() },
     CborCodec,
@@ -396,10 +396,10 @@ For newer integrations, prefer binding structured principals when actor/session/
 
 ## Step 6: Generate The Dart Package
 
-From `coolstack/`:
+From `cratestack/`:
 
 ```bash
-cargo run -p coolstack-cli -- generate-dart \
+cargo run -p cratestack-cli -- generate-dart \
   --schema "../vaam-backends/services/catalog-service/schema/catalog.cool" \
   --out "../frontends/vaam-mobile/packages/gen_catalog_client" \
   --library-name gen_catalog_client \
@@ -453,18 +453,18 @@ flutter pub get
 
 ## Step 8: Wire The Generated Runtime Bridge In Flutter
 
-The generated package expects a `CoolstackRuntimeBridge` implementation plus provider overrides.
+The generated package expects a `CrateStackRuntimeBridge` implementation plus provider overrides.
 
 Minimal bridge shape:
 
 ```dart
 import 'package:gen_catalog_client/gen_catalog_client.dart';
 
-final class CatalogBridge implements CoolstackRuntimeBridge {
+final class CatalogBridge implements CrateStackRuntimeBridge {
   @override
-  Future<CoolstackBridgeResponse> execute(
-    CoolstackBridgeRequest request, {
-    CoolstackCallOptions? options,
+  Future<CrateStackBridgeResponse> execute(
+    CrateStackBridgeRequest request, {
+    CrateStackCallOptions? options,
   }) async {
     throw UnimplementedError();
   }
@@ -490,7 +490,7 @@ Example selected read:
 ```dart
 import 'package:gen_catalog_client/gen_catalog_client.dart';
 
-Future<void> fetchCatalogProduct(GenCatalogClientCoolstackClient client) async {
+Future<void> fetchCatalogProduct(GenCatalogClientCrateStackClient client) async {
   final product = await client.products.getSelected(
     'prod_123',
     selection: ProductSelection()

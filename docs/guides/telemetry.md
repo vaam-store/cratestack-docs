@@ -23,7 +23,7 @@ Generated telemetry does not currently cover:
 
 ## Host Setup
 
-CrateStack re-exports `tracing` as `coolstack::tracing`, but subscriber setup stays host-owned.
+CrateStack re-exports `tracing` as `cratestack::tracing`, but subscriber setup stays host-owned.
 
 Minimal example:
 
@@ -55,20 +55,20 @@ Generated procedure wrappers emit:
 
 Generated procedure HTTP handlers also emit:
 
-1. an `info_span!` named `coolstack_procedure_route`
+1. an `info_span!` named `cratestack_procedure_route`
 2. `warn` events for transport preflight, auth, or decode failures
 3. `info` / `warn` on route completion or failure
 
 Procedure invocation spans are named:
 
-1. `coolstack_procedure_invoke`
-2. `coolstack_procedure_invoke_with_db`
+1. `cratestack_procedure_invoke`
+2. `cratestack_procedure_invoke_with_db`
 
 ## Generated Model List Telemetry
 
 Generated model list handlers emit:
 
-1. an `info_span!` named `coolstack_model_list_route`
+1. an `info_span!` named `cratestack_model_list_route`
 2. `warn` events for response negotiation failures
 3. `warn` events for auth failures
 4. `warn` events for query parsing or selection validation failures
@@ -83,18 +83,18 @@ Current generated fields include:
 
 | Field                     | Meaning                                                                                 |
 |---------------------------|-----------------------------------------------------------------------------------------|
-| `coolstack_route`         | Generated HTTP route path such as `/$procs/getFeedPage` or `/posts`                     |
-| `coolstack_model`         | Model name for generated model list routes                                              |
-| `coolstack_procedure`     | Procedure name for generated procedure wrappers and routes                              |
-| `coolstack_operation`     | Operation label such as `procedure`, `list`, `authorize`, `invoke`, or `invoke_with_db` |
-| `coolstack_authenticated` | Whether the resolved `CoolContext` is authenticated                                     |
-| `coolstack_error`         | `CoolError::code()` for failed operations                                               |
-| `coolstack_duration_ms`   | End-to-end elapsed time recorded by the generated wrapper or route                      |
-| `coolstack_paged`         | Whether a generated model list route returned a `Page<T>` envelope                      |
-| `coolstack_limit`         | Parsed `limit` query value when present                                                 |
-| `coolstack_offset`        | Parsed `offset` query value when present                                                |
-| `coolstack_count`         | Number of items returned by the completed list response                                 |
-| `coolstack_total_count`   | Total result count recorded for paged list responses                                    |
+| `cratestack_route`         | Generated HTTP route path such as `/$procs/getFeedPage` or `/posts`                     |
+| `cratestack_model`         | Model name for generated model list routes                                              |
+| `cratestack_procedure`     | Procedure name for generated procedure wrappers and routes                              |
+| `cratestack_operation`     | Operation label such as `procedure`, `list`, `authorize`, `invoke`, or `invoke_with_db` |
+| `cratestack_authenticated` | Whether the resolved `CoolContext` is authenticated                                     |
+| `cratestack_error`         | `CoolError::code()` for failed operations                                               |
+| `cratestack_duration_ms`   | End-to-end elapsed time recorded by the generated wrapper or route                      |
+| `cratestack_paged`         | Whether a generated model list route returned a `Page<T>` envelope                      |
+| `cratestack_limit`         | Parsed `limit` query value when present                                                 |
+| `cratestack_offset`        | Parsed `offset` query value when present                                                |
+| `cratestack_count`         | Number of items returned by the completed list response                                 |
+| `cratestack_total_count`   | Total result count recorded for paged list responses                                    |
 
 All current generated events use the `coolstack` tracing target.
 

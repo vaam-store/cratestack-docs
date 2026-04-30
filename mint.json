@@ -8,13 +8,19 @@
       "pages": [
         "index",
         "overview/current-state",
-        "getting-started/quickstart"
+        "overview/release-track"
+      ]
+    },
+    {
+      "group": "Get Started",
+      "pages": [
+        "getting-started/quickstart",
+        "guides/auth-provider"
       ]
     },
     {
       "group": "Guides",
       "pages": [
-        "guides/auth-provider",
         "guides/telemetry",
         "adoption/vaam-catalog"
       ]

@@ -15,7 +15,7 @@ CrateStack is intended to be a Rust-native, schema-first backend framework layer
 The primary developer experience should be:
 
 ```rust
-coolstack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cool");
 ```
 
 Developers should define their data model, authorization rules, field exposure rules, custom fields, and procedures in `.cool` schema files. CrateStack should generate a typed ORM client, canonical REST CRUD routes, procedure interfaces, request/response types, generated client libraries, and policy enforcement code.
@@ -48,10 +48,10 @@ The project has several important constraints:
 CrateStack v0 will use a macro-first, schema-first architecture centered around:
 
 ```rust
-coolstack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cool");
 ```
 
-The macro will parse and validate the `.cool` schema at compile time and generate a Rust module named `coolstack_schema` containing:
+The macro will parse and validate the `.cool` schema at compile time and generate a Rust module named `cratestack_schema` containing:
 
 * model structs
 * input structs
@@ -63,7 +63,7 @@ The macro will parse and validate the `.cool` schema at compile time and generat
 * Axum REST routes
 * client-generation metadata
 * custom-field resolver traits
-* the generated `Coolstack` runtime type
+* the generated `CrateStack` runtime type
 
 CrateStack v0 will use SQLx as the database execution backend and PostgreSQL as the only supported database.
 
@@ -90,7 +90,7 @@ Generated success responses should default to raw typed bodies. When metadata is
 The primary integration point is:
 
 ```rust
-coolstack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cool");
 ```
 
 The procedural macro will:
@@ -105,7 +105,7 @@ The procedural macro will:
 Generated code will live in a fixed module for v0:
 
 ```rust
-coolstack_schema
+cratestack_schema
 ```
 
 ## Generated Runtime Surface
@@ -113,24 +113,24 @@ coolstack_schema
 The generated module will expose:
 
 ```rust
-coolstack_schema::Coolstack
-coolstack_schema::routes
-coolstack_schema::CoolProcedures
-coolstack_schema::CustomFieldResolver
-coolstack_schema::models
-coolstack_schema::user
-coolstack_schema::post
+cratestack_schema::CrateStack
+cratestack_schema::routes
+cratestack_schema::CoolProcedures
+cratestack_schema::CustomFieldResolver
+cratestack_schema::models
+cratestack_schema::user
+cratestack_schema::post
 ```
 
 Example application setup:
 
 ```rust
-coolstack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cool");
 
 pub struct AppProcedures;
 
 #[async_trait::async_trait]
-impl coolstack_schema::CoolProcedures for AppProcedures {
+impl cratestack_schema::CoolProcedures for AppProcedures {
     // generated procedure methods
 }
 
@@ -138,15 +138,15 @@ impl coolstack_schema::CoolProcedures for AppProcedures {
 async fn main() -> anyhow::Result<()> {
     let pool = sqlx::PgPool::connect(&std::env::var("DATABASE_URL")?).await?;
 
-    let cool = coolstack_schema::Coolstack::builder(pool).build();
+    let cool = cratestack_schema::CrateStack::builder(pool).build();
 
     let app = axum::Router::new()
         .nest(
             "/api",
-            coolstack_schema::axum::router(
+            cratestack_schema::axum::router(
                 cool,
                 AppProcedures,
-                coolstack_codec_cbor::CborCodec::default(),
+                cratestack_codec_cbor::CborCodec::default(),
                 resolve_context,
             ),
         );
@@ -236,10 +236,10 @@ CrateStack generates a Rust trait:
 pub trait CoolProcedures: Send + Sync + 'static {
     async fn publish_post(
         &self,
-        db: &Coolstack,
-        ctx: &coolstack::CoolContext,
+        db: &CrateStack,
+        ctx: &cratestack::CoolContext,
         args: PublishPostInput,
-    ) -> Result<Post, coolstack::CoolError>;
+    ) -> Result<Post, cratestack::CoolError>;
 }
 ```
 
@@ -249,13 +249,13 @@ Applications provide an implementation:
 pub struct AppProcedures;
 
 #[async_trait::async_trait]
-impl coolstack_schema::CoolProcedures for AppProcedures {
+impl cratestack_schema::CoolProcedures for AppProcedures {
     async fn publish_post(
         &self,
-        db: &coolstack_schema::Coolstack,
-        ctx: &coolstack::CoolContext,
-        args: coolstack_schema::PublishPostInput,
-    ) -> Result<coolstack_schema::Post, coolstack::CoolError> {
+        db: &cratestack_schema::CrateStack,
+        ctx: &cratestack::CoolContext,
+        args: cratestack_schema::PublishPostInput,
+    ) -> Result<cratestack_schema::Post, cratestack::CoolError> {
         db.post()
             .update(args.post_id)
             .set(post::published(), true)
@@ -392,13 +392,13 @@ pub trait CoolCodec: Clone + Send + Sync + 'static {
 Required v0 codec:
 
 ```text
-coolstack-codec-cbor
+cratestack-codec-cbor
 ```
 
 Optional codec:
 
 ```text
-coolstack-codec-json
+cratestack-codec-json
 ```
 
 Generated types must derive:
@@ -469,27 +469,27 @@ Rust value -> codec.encode -> envelope.seal_response -> HTTP body
 CrateStack v0 will use a multi-crate workspace:
 
 ```text
-coolstack/
+cratestack/
   crates/
-    coolstack/
+    cratestack/
       // user-facing runtime crate and re-exports
-    coolstack-macros/
+    cratestack-macros/
       // include_schema! proc macro
-    coolstack-parser/
+    cratestack-parser/
       // .cool parser
-    coolstack-core/
+    cratestack-core/
       // AST, IR, validation, value model
-    coolstack-policy/
+    cratestack-policy/
       // policy expression handling and SQL compilation
-    coolstack-sqlx/
+    cratestack-sqlx/
       // SQLx backend
-    coolstack-axum/
+    cratestack-axum/
       // Axum REST integration
-    coolstack-codec-cbor/
+    cratestack-codec-cbor/
       // CBOR codec
-    coolstack-codec-json/
+    cratestack-codec-json/
       // optional JSON codec
-    coolstack-cose/
+    cratestack-cose/
       // optional COSE envelope support
 ```
 
@@ -501,7 +501,7 @@ coolstack/
 * Schema remains the source of truth.
 * Generated ORM and REST routes stay consistent with the schema.
 * Authorization is centralized and declarative.
-* Policy literals, predicates, and procedure-policy evaluation now have a canonical shared home in `coolstack-policy`.
+* Policy literals, predicates, and procedure-policy evaluation now have a canonical shared home in `cratestack-policy`.
 * Procedures provide a first-class place for business logic.
 * Procedures remain policy-aware by default.
 * Authentication stays framework-agnostic.
@@ -539,18 +539,18 @@ coolstack/
 
 ## Alternative 1: Generate an External Crate Instead of Using a Macro
 
-A CLI could generate a `coolstack-generated` crate that the application imports.
+A CLI could generate a `cratestack-generated` crate that the application imports.
 
 Example:
 
 ```toml
-coolstack-generated = { path = "./coolstack-generated" }
+cratestack-generated = { path = "./cratestack-generated" }
 ```
 
 Rejected for v0 because the preferred developer experience is to define `.cool` files and include them directly with:
 
 ```rust
-coolstack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cool");
 ```
 
 This avoids an explicit generation step and keeps schema inclusion closer to normal Rust module inclusion.
@@ -649,7 +649,7 @@ The decision optimizes for:
 7. The CLI should provide `coolstack check` and `coolstack print-ir` to make macro debugging easier.
 8. JSON support should live outside core.
 9. CBOR should be the first official codec implementation.
-10. COSE support should be optional and isolated in `coolstack-cose`.
+10. COSE support should be optional and isolated in `cratestack-cose`.
 
 ## Follow-Up ADRs
 

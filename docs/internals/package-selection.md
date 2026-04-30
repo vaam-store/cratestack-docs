@@ -58,44 +58,44 @@ Dependencies should live in the narrowest crate that needs them.
 Recommended workspace:
 
 ```text
-coolstack/
+cratestack/
   crates/
-    coolstack/
-    coolstack-core/
-    coolstack-parser/
-    coolstack-policy/
-    coolstack-macros/
-    coolstack-sqlx/
-    coolstack-axum/
-    coolstack-codec-cbor/
-    coolstack-codec-json/
-    coolstack-cose/
-    coolstack-client-rust/
-    coolstack-client-dart/
-    coolstack-cli/
-    coolstack-lsp/
+    cratestack/
+    cratestack-core/
+    cratestack-parser/
+    cratestack-policy/
+    cratestack-macros/
+    cratestack-sqlx/
+    cratestack-axum/
+    cratestack-codec-cbor/
+    cratestack-codec-json/
+    cratestack-cose/
+    cratestack-client-rust/
+    cratestack-client-dart/
+    cratestack-cli/
+    cratestack-lsp/
   packages/
-    coolstack-vscode/
+    cratestack-vscode/
 ```
 
 Dependency boundary rules:
 
-1. `coolstack-core` must not depend on Axum.
-2. `coolstack-core` must not depend on SQLx unless unavoidable.
-3. `coolstack-core` must not depend on JSON-specific crates.
-4. `coolstack-core` may depend on Serde traits.
-5. `coolstack-sqlx` owns SQLx.
-6. `coolstack-axum` owns Axum, Tower, HTTP-body integration.
-7. `coolstack-codec-cbor` owns the Serde-based CBOR codec surface built on `minicbor-serde`.
-8. JSON support currently lives inline in `coolstack-client-rust` rather than a dedicated `coolstack-codec-json` crate.
-9. COSE is currently a reserved runtime seam rather than a dedicated implemented `coolstack-cose` crate.
+1. `cratestack-core` must not depend on Axum.
+2. `cratestack-core` must not depend on SQLx unless unavoidable.
+3. `cratestack-core` must not depend on JSON-specific crates.
+4. `cratestack-core` may depend on Serde traits.
+5. `cratestack-sqlx` owns SQLx.
+6. `cratestack-axum` owns Axum, Tower, HTTP-body integration.
+7. `cratestack-codec-cbor` owns the Serde-based CBOR codec surface built on `minicbor-serde`.
+8. JSON support currently lives inline in `cratestack-client-rust` rather than a dedicated `cratestack-codec-json` crate.
+9. COSE is currently a reserved runtime seam rather than a dedicated implemented `cratestack-cose` crate.
 10. `application/cbor-seq` is a planned framing-aware transport mode and is not implemented today.
-11. `coolstack-macros` owns proc-macro dependencies.
-12. `coolstack-client-rust` owns generated Rust client runtime support.
-13. `coolstack-client-dart` owns generated Dart or Flutter package generation.
-14. `coolstack-cli` owns CLI and terminal diagnostics dependencies.
-15. `coolstack-lsp` owns LSP/editor protocol behavior over parser and semantic surfaces.
-16. `coolstack-vscode` is a thin editor wrapper that contributes the `.cool` language and launches `coolstack-lsp`.
+11. `cratestack-macros` owns proc-macro dependencies.
+12. `cratestack-client-rust` owns generated Rust client runtime support.
+13. `cratestack-client-dart` owns generated Dart or Flutter package generation.
+14. `cratestack-cli` owns CLI and terminal diagnostics dependencies.
+15. `cratestack-lsp` owns LSP/editor protocol behavior over parser and semantic surfaces.
+16. `cratestack-vscode` is a thin editor wrapper that contributes the `.cool` language and launches `cratestack-lsp`.
 
 ## 2.1 Current Direction Update
 
@@ -140,7 +140,7 @@ Purpose:
 
 Used by:
 
-* `coolstack-core`
+* `cratestack-core`
 * generated schema code
 * codec crates
 * REST integration crates
@@ -173,7 +173,7 @@ Purpose:
 
 Used by:
 
-* `coolstack-core`
+* `cratestack-core`
 * parser
 * policy engine
 * SQLx integration
@@ -208,7 +208,7 @@ Purpose:
 
 Used by:
 
-* `coolstack-cli`
+* `cratestack-cli`
 * examples
 * tests
 
@@ -240,8 +240,8 @@ Purpose:
 
 Used by:
 
-* `coolstack-core`
-* `coolstack-axum`
+* `cratestack-core`
+* `cratestack-axum`
 * codec crates
 * envelope crates
 
@@ -274,8 +274,8 @@ Purpose:
 
 Used by:
 
-* `coolstack-core`, if framework-neutral HTTP concepts are needed
-* `coolstack-axum`
+* `cratestack-core`, if framework-neutral HTTP concepts are needed
+* `cratestack-axum`
 
 Recommended dependency:
 
@@ -306,8 +306,8 @@ Purpose:
 
 Used by:
 
-* `coolstack-sqlx`
-* `coolstack-axum`
+* `cratestack-sqlx`
+* `cratestack-axum`
 * optionally core internals
 
 Recommended dependency:
@@ -340,8 +340,8 @@ Purpose:
 
 Used by:
 
-* `coolstack-axum`
-* `coolstack-sqlx`
+* `cratestack-axum`
+* `cratestack-sqlx`
 * examples
 * integration tests
 
@@ -379,7 +379,7 @@ Purpose:
 Used by:
 
 * generated schema code
-* `coolstack-core` or `coolstack-axum`
+* `cratestack-core` or `cratestack-axum`
 
 Recommended dependency:
 
@@ -415,7 +415,7 @@ Purpose:
 
 Used by:
 
-* `coolstack-sqlx`
+* `cratestack-sqlx`
 * generated schema code where needed
 
 Recommended dependency:
@@ -521,7 +521,7 @@ Purpose:
 
 Used by:
 
-* `coolstack-axum`
+* `cratestack-axum`
 * generated route code
 * examples
 
@@ -537,7 +537,7 @@ axum = { version = "0.8", default-features = false, features = [
 ] }
 ```
 
-Do not enable `json` unless `coolstack-codec-json` or examples specifically require it.
+Do not enable `json` unless `cratestack-codec-json` or examples specifically require it.
 
 Rationale:
 
@@ -561,7 +561,7 @@ Purpose:
 
 Used by:
 
-* `coolstack-axum`
+* `cratestack-axum`
 
 Recommended dependency:
 
@@ -575,7 +575,7 @@ Axum is Tower-based. CrateStack integrations may need Tower layers for context p
 
 Decision:
 
-Use where necessary in `coolstack-axum`, but avoid exposing unnecessary Tower complexity in the public API.
+Use where necessary in `cratestack-axum`, but avoid exposing unnecessary Tower complexity in the public API.
 
 ---
 
@@ -615,7 +615,7 @@ Purpose:
 
 Used by:
 
-* `coolstack-parser`
+* `cratestack-parser`
 
 Recommended dependency:
 
@@ -637,7 +637,7 @@ Complex Chumsky parsers can produce difficult Rust compiler errors during parser
 
 Mitigation:
 
-* isolate parser grammar in `coolstack-parser`
+* isolate parser grammar in `cratestack-parser`
 * keep parser modules small
 * maintain extensive parser tests
 * snapshot parser errors
@@ -656,9 +656,9 @@ Purpose:
 
 Used by:
 
-* `coolstack-parser`
-* `coolstack-cli`
-* possibly `coolstack-macros`
+* `cratestack-parser`
+* `cratestack-cli`
+* possibly `cratestack-macros`
 
 Recommended dependency:
 
@@ -693,7 +693,7 @@ Ariadne is already selected for source diagnostics. Adding Miette now may duplic
 
 Decision:
 
-Do not adopt in v0 core. Reconsider for `coolstack-cli` if Ariadne alone is not sufficient.
+Do not adopt in v0 core. Reconsider for `cratestack-cli` if Ariadne alone is not sufficient.
 
 ---
 
@@ -745,8 +745,8 @@ Purpose:
 
 Used by:
 
-* `coolstack-macros`
-* `coolstack-codegen` if separated
+* `cratestack-macros`
+* `cratestack-codegen` if separated
 
 Recommended dependency:
 
@@ -770,8 +770,8 @@ Purpose:
 
 Used by:
 
-* `coolstack-macros`
-* `coolstack-codegen`
+* `cratestack-macros`
+* `cratestack-codegen`
 
 Recommended dependency:
 
@@ -797,7 +797,7 @@ Purpose:
 
 Used by:
 
-* `coolstack-macros`
+* `cratestack-macros`
 
 Recommended dependency:
 
@@ -826,7 +826,7 @@ Purpose:
 
 Used by:
 
-* `coolstack-cli`
+* `cratestack-cli`
 * codegen debug tooling
 
 Recommended dependency:
@@ -858,8 +858,8 @@ Purpose:
 
 Used by:
 
-* `coolstack-codec-cbor`
-* possibly `coolstack-cose` indirectly
+* `cratestack-codec-cbor`
+* possibly `cratestack-cose` indirectly
 
 Recommended dependency:
 
@@ -889,7 +889,7 @@ Purpose:
 
 Used by:
 
-* `coolstack-codec-json`
+* `cratestack-codec-json`
 * tests/examples only
 
 Recommended dependency:
@@ -959,7 +959,7 @@ Purpose:
 
 Used by:
 
-* `coolstack-cose`
+* `cratestack-cose`
 
 Recommended dependency:
 
@@ -973,7 +973,7 @@ Coset provides Rust types for COSE and builds on Ciborium. It gives CrateStack a
 
 Decision:
 
-Use Coset for `coolstack-cose`.
+Use Coset for `cratestack-cose`.
 
 ---
 
@@ -1000,7 +1000,7 @@ Coset models COSE structures but applications still need concrete cryptographic 
 
 Decision:
 
-For v0, define a signer/verifier trait boundary in `coolstack-cose`. Add concrete algorithm adapters only when required by a target deployment.
+For v0, define a signer/verifier trait boundary in `cratestack-cose`. Add concrete algorithm adapters only when required by a target deployment.
 
 Recommended initial algorithm if one must be selected:
 
@@ -1053,7 +1053,7 @@ Purpose:
 
 Used by:
 
-* `coolstack-cose`
+* `cratestack-cose`
 * application examples involving keys
 
 Recommended dependency:
@@ -1078,7 +1078,7 @@ Purpose:
 
 Used by:
 
-* `coolstack-cose`
+* `cratestack-cose`
 
 Recommended dependency:
 
@@ -1107,8 +1107,8 @@ Purpose:
 Used by:
 
 * generated schema code
-* `coolstack-core`
-* `coolstack-sqlx`
+* `cratestack-core`
+* `cratestack-sqlx`
 
 Recommended dependency:
 
@@ -1134,7 +1134,7 @@ Purpose:
 Used by:
 
 * generated schema code
-* `coolstack-sqlx`
+* `cratestack-sqlx`
 
 Recommended dependency:
 
@@ -1189,7 +1189,7 @@ Purpose:
 
 Used by:
 
-* `coolstack-core`
+* `cratestack-core`
 * parser/analyzer
 * codegen
 
@@ -1223,7 +1223,7 @@ Purpose:
 
 Used by:
 
-* `coolstack-cli`
+* `cratestack-cli`
 
 Recommended dependency:
 
@@ -1251,7 +1251,7 @@ Purpose:
 
 Used by:
 
-* `coolstack-cli`
+* `cratestack-cli`
 * possibly parser diagnostics
 
 Recommended dependency:
@@ -1450,7 +1450,7 @@ Use either `cargo-audit` directly or through `cargo-deny`. Avoid duplicate CI no
 
 # 16. Dependency Feature Matrix
 
-## 16.1 `coolstack-core`
+## 16.1 `cratestack-core`
 
 Required:
 
@@ -1482,11 +1482,11 @@ coset
 
 Exception:
 
-If generated public model types directly require SQLx traits, SQLx should be used in generated code or `coolstack-sqlx`, not `coolstack-core`.
+If generated public model types directly require SQLx traits, SQLx should be used in generated code or `cratestack-sqlx`, not `cratestack-core`.
 
 ---
 
-## 16.2 `coolstack-parser`
+## 16.2 `cratestack-parser`
 
 Required:
 
@@ -1504,7 +1504,7 @@ insta = { version = "1", features = ["yaml"] }
 
 ---
 
-## 16.3 `coolstack-macros`
+## 16.3 `cratestack-macros`
 
 Required:
 
@@ -1517,9 +1517,9 @@ syn = { version = "2", features = ["full"] }
 Internal path dependencies:
 
 ```toml
-coolstack-parser = { path = "../coolstack-parser" }
-coolstack-core = { path = "../coolstack-core" }
-coolstack-policy = { path = "../coolstack-policy" }
+cratestack-parser = { path = "../cratestack-parser" }
+cratestack-core = { path = "../cratestack-core" }
+cratestack-policy = { path = "../cratestack-policy" }
 ```
 
 Optional:
@@ -1530,7 +1530,7 @@ prettyplease = "0.2"
 
 ---
 
-## 16.4 `coolstack-sqlx`
+## 16.4 `cratestack-sqlx`
 
 Required:
 
@@ -1548,7 +1548,7 @@ tracing = "0.1"
 
 ---
 
-## 16.5 `coolstack-axum`
+## 16.5 `cratestack-axum`
 
 Required:
 
@@ -1574,7 +1574,7 @@ serde_json
 
 ---
 
-## 16.6 `coolstack-codec-cbor`
+## 16.6 `cratestack-codec-cbor`
 
 Required:
 
@@ -1585,7 +1585,7 @@ serde = { version = "1", features = ["derive"] }
 
 ---
 
-## 16.7 `coolstack-codec-json`
+## 16.7 `cratestack-codec-json`
 
 Required:
 
@@ -1600,7 +1600,7 @@ This crate is optional and must not be pulled by default.
 
 ---
 
-## 16.8 `coolstack-cose`
+## 16.8 `cratestack-cose`
 
 Required:
 
@@ -1627,7 +1627,7 @@ Start with COSE structure support and signer/verifier traits. Add concrete crypt
 
 ---
 
-## 16.9 `coolstack-cli`
+## 16.9 `cratestack-cli`
 
 Required:
 
@@ -1655,11 +1655,11 @@ Recommended root features:
 ```toml
 [features]
 default = ["postgres", "axum", "cbor"]
-postgres = ["dep:coolstack-sqlx"]
-axum = ["dep:coolstack-axum"]
-cbor = ["dep:coolstack-codec-cbor"]
-json = ["dep:coolstack-codec-json"]
-cose = ["dep:coolstack-cose"]
+postgres = ["dep:cratestack-sqlx"]
+axum = ["dep:cratestack-axum"]
+cbor = ["dep:cratestack-codec-cbor"]
+json = ["dep:cratestack-codec-json"]
+cose = ["dep:cratestack-cose"]
 ```
 
 Potential stricter default for CBOR-first projects:
@@ -1867,41 +1867,41 @@ For CrateStack v0, the team should proceed with these major decisions:
 The first repo implementation slice makes these choices explicit:
 
 1. `chrono` is the initial `DateTime` type.
-2. The implemented crates are `coolstack`, `coolstack-core`, `coolstack-parser`, `coolstack-policy`, `coolstack-macros`, `coolstack-codec-cbor`, `coolstack-codec-json`, `coolstack-axum`, `coolstack-cli`, and `coolstack-sqlx`.
-3. `coolstack-axum` and `coolstack-codec-json` are implemented, while `coolstack-cose` remains deferred.
-4. `coolstack-cli` prints the parsed IR with Rust debug formatting rather than a JSON renderer to keep JSON out of the initial dependency surface.
+2. The implemented crates are `coolstack`, `cratestack-core`, `cratestack-parser`, `cratestack-policy`, `cratestack-macros`, `cratestack-codec-cbor`, `cratestack-codec-json`, `cratestack-axum`, `cratestack-cli`, and `cratestack-sqlx`.
+3. `cratestack-axum` and `cratestack-codec-json` are implemented, while `cratestack-cose` remains deferred.
+4. `cratestack-cli` prints the parsed IR with Rust debug formatting rather than a JSON renderer to keep JSON out of the initial dependency surface.
 5. The current SQLx slice supports generated delegate scaffolding for `create`, `find_many`, `find_unique`, `update`, and `delete`, along with generated create/update input structs.
 6. Generated SQL currently maps schema model and field names to snake_case SQL identifiers and uses naive pluralized snake_case table names.
 7. `find_many` currently supports a minimal query IR: AND-combined `eq`, `ne`, `in`, string `contains`, string `starts_with`, boolean convenience filters, null-aware optional-field filters, explicit ordering, limit, and offset.
-8. Generated field reference modules expose schema-specific helpers such as `coolstack_schema::post::published()` for the current filter/order API.
+8. Generated field reference modules expose schema-specific helpers such as `cratestack_schema::post::published()` for the current filter/order API.
 9. Generated create inputs currently omit `@id` and `@default(...)` fields, and generated update inputs emit only changed columns.
 10. Read-policy support now exists for `@@allow(...)` and `@@deny(...)` rules on `find_many` / `find_unique`, with deny taking precedence over allow.
-11. Canonical policy literals, predicates, relation quantifiers, and procedure-policy evaluation now live in `coolstack-policy`, which is shared by macro lowering and runtime enforcement.
+11. Canonical policy literals, predicates, relation quantifiers, and procedure-policy evaluation now live in `cratestack-policy`, which is shared by macro lowering and runtime enforcement.
 12. The supported model-policy subset now includes list/detail read splits, recursive to-one traversal, dotted to-many quantifiers (`some` / `every` / `none`), nested auth paths, and create-time relation checks when the root join columns are available from create input or auth-derived defaults.
 13. Create, update, and delete policy enforcement now exists for the same canonical policy surface; create checks run against generated input values plus auth context after applying `@default(auth().field)` defaults, and create-time relation checks can trigger DB lookups when the required join columns are known.
-14. DB-backed integration coverage for policy enforcement now exists behind an env-gated test path using `COOLSTACK_TEST_DATABASE_URL`, and `coolstack/compose.yml` now provides a local PostgreSQL 18 target for that loop.
-15. Procedure policy execution now exists through generated wrappers under `coolstack_schema::procedures::*`, supports grouped expressions plus nested `args.<field>` comparisons, and can delegate DB-backed row auth through `@authorize(Model, action, args.path)`.
+14. DB-backed integration coverage for policy enforcement now exists behind an env-gated test path using `COOLSTACK_TEST_DATABASE_URL`, and `cratestack/compose.yml` now provides a local PostgreSQL 18 target for that loop.
+15. Procedure policy execution now exists through generated wrappers under `cratestack_schema::procedures::*`, supports grouped expressions plus nested `args.<field>` comparisons, and can delegate DB-backed row auth through `@authorize(Model, action, args.path)`.
 16. Built-in `Page<T>` procedure returns now exist for declared model/type items, lower to a canonical `items` / `totalCount` / `pageInfo` envelope, and decode through the generated Rust and Dart client surfaces without introducing general schema generics.
 17. Models can now opt into paged generated list responses with bare `@@paged`; that changes the generated top-level list route plus Rust/Dart `list(...)` and `listSelected(...)` helpers to use `Page<Model>` / `Page<SelectedModel>` while keeping non-paged models on plain array responses.
 18. `CoolContext` now carries a structured principal surface with `actor`, `session`, `tenant`, and free-form claims while preserving legacy `auth().field` compatibility and exact-key-first lookup behavior.
 19. Generated procedure registry traits now exist and currently use `Send` futures rather than a larger plugin/runtime abstraction.
-20. Model-level `@@emit(created|updated|deleted)` directives now exist for the current narrow eventing slice; generated schema modules expose typed subscription helpers under `coolstack_schema::events`, generated SQLx `create` / `update` / `delete` paths now write matching envelopes into a transactional PostgreSQL outbox, and the generated event surface exposes an explicit drain hook for in-process delivery attempts.
-21. A new `coolstack-axum` crate now provides minimal codec/body response helpers, and generated schema modules now expose `model_router`, `procedure_router`, and combined `router` helpers.
+20. Model-level `@@emit(created|updated|deleted)` directives now exist for the current narrow eventing slice; generated schema modules expose typed subscription helpers under `cratestack_schema::events`, generated SQLx `create` / `update` / `delete` paths now write matching envelopes into a transactional PostgreSQL outbox, and the generated event surface exposes an explicit drain hook for in-process delivery attempts.
+21. A new `cratestack-axum` crate now provides minimal codec/body response helpers, and generated schema modules now expose `model_router`, `procedure_router`, and combined `router` helpers.
 22. Generated Axum model routes now cover `GET`, `POST`, `PATCH`, and `DELETE` for generated model endpoints, with canonical `fields`, nested declared-relation `include` paths, canonical `sort`, `limit`, `offset`, scalar equality filters, and a small route-layer operator suffix set (`__ne`, `__lt`, `__lte`, `__gt`, `__gte`, `__in`, `__contains`, `__startsWith`, `__isNull`) on list routes, including `cuid`, UUID, and RFC3339 DateTime parsing. Legacy `orderBy` remains accepted as a compatibility alias for `sort`.
 23. Generated list routes now accept canonical grouped `where=` expressions and can compile recursive relation filters such as `author.email=owner@example.com` or `user.sessions.some.label__startsWith=Primary` when the schema declares explicit `@relation(fields:[...],references:[...])` metadata.
 24. The current grouped route grammar is contract-stable as `whereExpr := orExpr`, `orExpr := andExpr ("|" andExpr)*`, `andExpr := factor ("," factor)*`, and `factor := predicate | "(" whereExpr ")" | "not(" whereExpr ")"`. That means `not(...)` binds tighter than `,`, `,` binds tighter than `|`, and repeated `,` / `|` chains are left-associative unless parentheses override them. Legacy `or=` is still accepted only as a compatibility shortcut for a top-level OR list; canonical docs and new callers should prefer grouped `where=` because it is the only route form that supports nesting and unary negation.
 25. To-many relation filters now require explicit quantifiers (`some`, `every`, `none`) instead of the earlier generic nested-path shape, relation metadata validation now rejects mismatched scalar types between `fields:[...]` and `references:[...]`, and the same relation/query surface has typed DSL parity through generated compatibility helpers and builder-style `FilterExpr` composition.
 26. Generated list routes now support nested to-one relation-aware ordering such as `sort=author.email` or `sort=author.profile.nickname` through recursive correlated subqueries, and the generated model descriptor metadata now exposes per-resource allowed `fields`, `include`, and `sort` selections for route validation. Generated typed field modules still expose matching delegate helpers in both compatibility-function and builder-style forms. Delegate callers can use compatibility helpers such as `post::author::email_desc()` or builder paths such as `post::author().email().desc()` and `post::author().profile().nickname().eq(...)`. Generated typed field modules also expose quantified to-many filter paths such as `user::sessions().some().label().contains(...)`, while cycle-aware code generation stops repeating relation expansions like `user.sessions.some.user.sessions...`. `FilterExpr` now supports chainable `.and(...)` and `.or(...)` composition so the typed builder DSL can express grouped boolean filters without manually calling `FilterExpr::all(...)` or `FilterExpr::any(...)`. Missing related rows sort with explicit `NULLS LAST` behavior and the model primary key is auto-appended as a tie-break when the caller does not already specify it; any path that crosses a to-many relation remains intentionally unsupported for ordering, shallow `include` only materializes directly declared relations, and the generated Dart client now exposes canonical `fields` and `include` query options plus per-model field/include constant groups even though selection-aware response typing is still incomplete.
 27. The generated HTTP layer now enforces a single configured codec through `Accept` and `Content-Type` header checks and uses dedicated `406` / `415` error variants rather than treating those mismatches as generic bad requests.
-26. A new `coolstack-client-rust` spike now exercises CBOR-first client calls against generated Axum-compatible routes, exposes an FFI-ready safe-Rust runtime bridge, and persists a narrow request journal through an abstract state store with in-memory and JSON-file implementations.
-27. A new `coolstack-client-store-sqlite` crate now provides the durable request-journal and state-version store implementation for the client runtime.
-26. A new `coolstack-client-flutter` crate now wraps the runtime bridge with byte-oriented safe-Rust APIs for Dart and Flutter callers without introducing raw pointer code into this workspace, but it does not yet expose persisted state or runtime-configurable SQLite selection through its public surface.
-27. `coolstack-client-dart` now renders from repo-managed templates under its own `templates/` directory, the CLI can accept a template override directory so projects can customize emitted Dart without forking the generator crate, the generated Dart seam no longer exposes `CoolstackWireCodec`, and the emitted output is now a richer Flutter-style package scaffold rather than a single flat file.
+26. A new `cratestack-client-rust` spike now exercises CBOR-first client calls against generated Axum-compatible routes, exposes an FFI-ready safe-Rust runtime bridge, and persists a narrow request journal through an abstract state store with in-memory and JSON-file implementations.
+27. A new `cratestack-client-store-sqlite` crate now provides the durable request-journal and state-version store implementation for the client runtime.
+26. A new `cratestack-client-flutter` crate now wraps the runtime bridge with byte-oriented safe-Rust APIs for Dart and Flutter callers without introducing raw pointer code into this workspace, but it does not yet expose persisted state or runtime-configurable SQLite selection through its public surface.
+27. `cratestack-client-dart` now renders from repo-managed templates under its own `templates/` directory, the CLI can accept a template override directory so projects can customize emitted Dart without forking the generator crate, the generated Dart seam no longer exposes `CrateStackWireCodec`, and the emitted output is now a richer Flutter-style package scaffold rather than a single flat file.
 28. The runtime bridge now treats bridge JSON bytes as an internal interop format while exposing runtime-wide transport config for `cbor` and `json`; COSE remains a reserved future envelope seam, and the generated Dart package still does not expose a typed remote-error surface.
 29. The project-local client runtime architecture is documented in `../architecture/client-runtime.md`; a raw exported ABI wrapper, signing integration, a fully typed Rust-owned Dart bridge, persisted-state exposure, runtime-configurable SQLite selection, and eventual removal of the bridge JSON transcode remain follow-up work.
 30. The current model HTTP surface still forwards directly into generated SQLx delegates and only exposes a narrow route-layer query subset rather than the full delegate filter DSL.
 31. Richer policy parsing, broker/webhook fan-out, stronger event-delivery guarantees beyond the current transactional outbox plus in-process drain loop, and broader procedure runtime features are still deferred.
-32. `cargo-deny` configuration is checked in at `coolstack/deny.toml` as part of the release-oriented workspace bootstrap.
+32. `cargo-deny` configuration is checked in at `cratestack/deny.toml` as part of the release-oriented workspace bootstrap.
 33. Generated telemetry now uses direct `tracing` spans/events for procedure authorization and invocation, generated procedure routes, and generated model list routes, while subscriber setup, filtering, and any exporter integration remain host-owned concerns.
 
 ---
@@ -1914,8 +1914,8 @@ The first repo implementation slice makes these choices explicit:
 4. Should COSE v0 include a concrete Ed25519 implementation or only signer/verifier traits?
 5. Should JSON codec be shipped in v0 or delayed until after CBOR is stable?
 6. Should `miette` replace or supplement Ariadne in CLI diagnostics?
-7. Should generated code depend directly on SQLx derive macros, or should row decoding be centralized in `coolstack-sqlx`?
-8. Should `tower` be exposed in public APIs or kept internal to `coolstack-axum`?
+7. Should generated code depend directly on SQLx derive macros, or should row decoding be centralized in `cratestack-sqlx`?
+8. Should `tower` be exposed in public APIs or kept internal to `cratestack-axum`?
 
 ---
 

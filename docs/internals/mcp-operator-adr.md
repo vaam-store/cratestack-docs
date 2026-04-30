@@ -202,21 +202,21 @@ No policy bypass.
 When MCP support is enabled, the macro may generate:
 
 ```rust
-coolstack_schema::mcp::server(cool)
-coolstack_schema::mcp::resources(cool)
-coolstack_schema::mcp::tools(cool)
+cratestack_schema::mcp::server(cool)
+cratestack_schema::mcp::resources(cool)
+cratestack_schema::mcp::tools(cool)
 ```
 
 Possible application setup:
 
 ```rust
-let cool = coolstack_schema::Coolstack::builder(pool)
-    .codec(coolstack_codec_cbor::CborCodec::default())
+let cool = cratestack_schema::CrateStack::builder(pool)
+    .codec(cratestack_codec_cbor::CborCodec::default())
     .procedures(AppProcedures)
     .build();
 
-let rest = coolstack_schema::routes(cool.clone());
-let mcp = coolstack_schema::mcp::server(cool.clone());
+let rest = cratestack_schema::routes(cool.clone());
+let mcp = cratestack_schema::mcp::server(cool.clone());
 ```
 
 The exact transport binding is deferred. The important architectural decision is that MCP is generated as a separate optional adapter.
@@ -312,16 +312,16 @@ MCP may require JSON-RPC messages. This must not contaminate the REST codec arch
 
 Therefore:
 
-* `coolstack-codec-json` remains optional for REST.
+* `cratestack-codec-json` remains optional for REST.
 * MCP support may depend on JSON internally as required by the MCP protocol.
-* This JSON dependency must live in `coolstack-mcp`, not in `coolstack-core` or REST codec crates.
+* This JSON dependency must live in `cratestack-mcp`, not in `cratestack-core` or REST codec crates.
 
 ## Crate Layout
 
 Add an optional crate:
 
 ```text
-coolstack-mcp/
+cratestack-mcp/
   // MCP operator integration
   // generated resource/tool mapping helpers
   // MCP server adapter
@@ -331,10 +331,10 @@ Root feature:
 
 ```toml
 [features]
-mcp = ["dep:coolstack-mcp"]
+mcp = ["dep:cratestack-mcp"]
 ```
 
-MCP-related dependencies must be isolated to `coolstack-mcp`.
+MCP-related dependencies must be isolated to `cratestack-mcp`.
 
 ## Schema Compiler Changes
 

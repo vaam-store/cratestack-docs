@@ -6,7 +6,7 @@ This document records the current state of CrateStack editor support, how to use
 
 CrateStack has two editor surfaces:
 
-* Rust files that consume `coolstack::include_schema!(...)`
+* Rust files that consume `cratestack::include_schema!(...)`
 * `.cool` schema files authored directly
 
 Those surfaces have different constraints.
@@ -19,9 +19,9 @@ Rust support depends on a real Cargo workspace because `include_schema!` is a pr
 
 Implemented in this repo today:
 
-* `crates/coolstack-lsp` provides a standalone language server for `.cool` files
-* `packages/coolstack-vscode` provides the VS Code extension wrapper that launches `coolstack-lsp`
-* `coolstack-cli check --format json` provides machine-readable diagnostics for CI or editor fallback integrations
+* `crates/cratestack-lsp` provides a standalone language server for `.cool` files
+* `packages/cratestack-vscode` provides the VS Code extension wrapper that launches `cratestack-lsp`
+* `cratestack-cli check --format json` provides machine-readable diagnostics for CI or editor fallback integrations
 * parser and semantic structures now preserve schema docs and source spans needed for editor features and generated Rust docs
 * `include_schema!` now emits Rust `#[doc = "..."]` attributes from schema-authored comments
 
@@ -57,7 +57,7 @@ Recommended workspace settings for this repo:
 ```json
 {
   "rust-analyzer.linkedProjects": [
-    "coolstack/Cargo.toml",
+    "cratestack/Cargo.toml",
     "vaam-backends/Cargo.toml"
   ],
   "rust-analyzer.procMacro.enable": true,
@@ -71,36 +71,36 @@ Why this is required:
 
 * this repo root is not a single Cargo workspace
 * generated Rust APIs come from proc-macro expansion
-* the generated `coolstack_schema` module only exists when rust-analyzer can build the real consumer crate
+* the generated `cratestack_schema` module only exists when rust-analyzer can build the real consumer crate
 
 ## `.cool` Setup In VS Code
 
-The intended path for `.cool` files is the `coolstack-vscode` extension plus `coolstack-lsp`.
+The intended path for `.cool` files is the `cratestack-vscode` extension plus `cratestack-lsp`.
 
 Local development flow:
 
-1. From `coolstack/`, build the language server with `cargo build -p coolstack-lsp`.
-2. From `coolstack/packages/coolstack-vscode`, run `pnpm install` if needed.
+1. From `cratestack/`, build the language server with `cargo build -p cratestack-lsp`.
+2. From `cratestack/packages/cratestack-vscode`, run `pnpm install` if needed.
 3. Install or run the extension.
-4. If the server binary is not on `PATH` and not bundled into the extension package, set `coolstack.lsp.path` to the built binary.
+4. If the server binary is not on `PATH` and not bundled into the extension package, set `cratestack.lsp.path` to the built binary.
 
 Supported extension settings:
 
-* `coolstack.lsp.path`: path to the `coolstack-lsp` binary
-* `coolstack.lsp.args`: extra args passed through to the server
+* `cratestack.lsp.path`: path to the `cratestack-lsp` binary
+* `cratestack.lsp.args`: extra args passed through to the server
 
 The extension resolves the server in this order:
 
-1. bundled binary under `server/<platform>/coolstack-lsp`
-2. configured `coolstack.lsp.path`
-3. `coolstack-lsp` on `PATH`
+1. bundled binary under `server/<platform>/cratestack-lsp`
+2. configured `cratestack.lsp.path`
+3. `cratestack-lsp` on `PATH`
 
 ## CLI Fallback And CI
 
 For machine-readable schema validation outside the editor:
 
 ```bash
-cargo run -p coolstack-cli -- check --schema path/to/schema.cool --format json
+cargo run -p cratestack-cli -- check --schema path/to/schema.cool --format json
 ```
 
 This is useful for:
@@ -129,12 +129,12 @@ This keeps one documentation source for:
 
 The current extension packaging model is intentionally thin.
 
-`coolstack-vscode` contributes the language registration and launches `coolstack-lsp`; the heavy logic stays in the Rust binary.
+`cratestack-vscode` contributes the language registration and launches `cratestack-lsp`; the heavy logic stays in the Rust binary.
 
 Current release flow:
 
-1. Build the release server with `cargo build --release -p coolstack-lsp`.
-2. Stage the binary into `packages/coolstack-vscode/server/<platform>/` with `pnpm run stage-server`.
+1. Build the release server with `cargo build --release -p cratestack-lsp`.
+2. Stage the binary into `packages/cratestack-vscode/server/<platform>/` with `pnpm run stage-server`.
 3. Package the extension with `pnpm run package:vsix`.
 
 The VSIX packaging step uses `vsce --no-dependencies` because the extension ships a small JavaScript wrapper plus the staged server binary rather than relying on npm dependency scanning to decide runtime contents.
@@ -167,10 +167,10 @@ Likely medium-term work:
 2. Add richer relation-aware validation so relation diagnostics can reason about more mismatches before code generation.
 3. Expose more stable editor-oriented library surfaces from parser and semantic crates instead of keeping some logic narrowly embedded in the current LSP layer.
 4. Improve multi-platform release packaging so extension artifacts can be produced and verified more systematically across supported targets.
-5. Add non-VS-Code editor integration paths using the standalone `coolstack-lsp` binary.
+5. Add non-VS-Code editor integration paths using the standalone `cratestack-lsp` binary.
 
 Deferred or optional follow-ups:
 
 1. Formatting support for `.cool` once the schema grammar and style expectations stabilize.
-2. Auto-download or release-channel discovery for `coolstack-lsp` binaries instead of requiring either a bundled server or manual path setup.
+2. Auto-download or release-channel discovery for `cratestack-lsp` binaries instead of requiring either a bundled server or manual path setup.
 3. More workspace-aware Rust and schema cross-navigation if future architecture needs symbol links between generated Rust surfaces and original schema declarations.

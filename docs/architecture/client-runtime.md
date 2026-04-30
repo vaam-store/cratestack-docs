@@ -14,7 +14,7 @@ CrateStack's transport contract is not JSON-first. The documented direction is:
 4. COSE is an envelope over codec bytes, not a codec
 5. sequence transports such as `application/cbor-seq` must be treated as framing concerns, not just renamed codecs
 
-The current `coolstack-client-dart` slice is still an experiment, but it no longer owns Dio directly. It now targets a byte-oriented bridge/runtime abstraction plus repo-managed templates, while still relying on generic value graphs for typed model conversion. That remaining typing gap is why the generated typed Dart `list` and `get` helpers intentionally stop short of claiming fully exact selection-aware response typing.
+The current `cratestack-client-dart` slice is still an experiment, but it no longer owns Dio directly. It now targets a byte-oriented bridge/runtime abstraction plus repo-managed templates, while still relying on generic value graphs for typed model conversion. That remaining typing gap is why the generated typed Dart `list` and `get` helpers intentionally stop short of claiming fully exact selection-aware response typing.
 
 ## Contract guardrails
 
@@ -37,7 +37,7 @@ flowchart LR
 
 ## Recommended crate split
 
-### `coolstack-client-rust`
+### `cratestack-client-rust`
 
 Owns the Rust runtime for generated clients.
 
@@ -52,7 +52,7 @@ Responsibilities:
 7. a future FFI-safe surface for Dart and Flutter wrappers
 8. additive selected `get/list` helpers that keep projecting through the canonical HTTP query contract
 
-### `coolstack-client-flutter`
+### `cratestack-client-flutter`
 
 Owns the Dart and Flutter-facing safe Rust wrapper over the runtime core.
 
@@ -63,7 +63,7 @@ Responsibilities:
 3. a future persisted-state projection for Dart or Flutter callers
 4. safe-Rust bridge methods that remain compatible with a future ABI wrapper
 
-### `coolstack-client-dart`
+### `cratestack-client-dart`
 
 Owns generated Dart contracts and typed facades that target a runtime abstraction rather than `dio` directly.
 
@@ -102,7 +102,7 @@ Non-goals for this store:
 Current implementation note:
 
 1. runtime config currently exposes only `InMemory` and `JsonFile`
-2. the SQLite-backed store exists as `coolstack-client-store-sqlite`, but it is not yet selectable through the public Dart or Flutter runtime config surface
+2. the SQLite-backed store exists as `cratestack-client-store-sqlite`, but it is not yet selectable through the public Dart or Flutter runtime config surface
 3. idempotency, replay metadata, and cache metadata are still deferred beyond the current request journal and state version markers
 
 Secrets should remain behind a separate host-owned boundary instead of being merged into the general state store.
@@ -138,7 +138,7 @@ Example caller shape on the Dart side:
 
 ```dart
 final posts = await client.post.list(
-  query: const CoolstackListQuery(
+  query: const CrateStackListQuery(
     // Trim the primary resource payload for list rendering.
     fields: [PostFieldNames.id, PostFieldNames.title],
     // Ask the server to embed a declared relation path.
@@ -155,7 +155,7 @@ final posts = await client.post.list(
 
 final post = await client.post.get(
   1,
-  query: const CoolstackFetchQuery(),
+  query: const CrateStackFetchQuery(),
 );
 ```
 
@@ -170,17 +170,17 @@ Recommended client-side reading:
 Rust-side generated caller shape:
 
 ```rust
-let selection = coolstack_schema::post::select()
+let selection = cratestack_schema::post::select()
     .id()
     .include_author_selected(
-        coolstack_schema::user::include_selection()
+        cratestack_schema::user::include_selection()
             .email()
             .include_profile_selected(
-                coolstack_schema::profile::include_selection().nickname(),
+                cratestack_schema::profile::include_selection().nickname(),
             ),
     );
 
-let post = coolstack_schema::client::Client::new(runtime)
+let post = cratestack_schema::client::Client::new(runtime)
     .posts()
     .get_selected(&1, &selection, &[])
     .await?;
@@ -196,7 +196,7 @@ This remains intentionally nested but contract-aligned:
 
 The first FFI-safe surface should prefer flat byte-oriented calls and opaque handles rather than exposing Rust generics or HTTP client internals over the boundary.
 
-Because this workspace currently forbids `unsafe_code`, the first implemented slice is FFI-ready rather than a raw exported C ABI. The Rust runtime now exposes flat wire types and a blocking opaque-handle bridge in safe Rust, and `coolstack-client-flutter` now wraps that bridge for Dart or Flutter callers without introducing raw pointer code in this workspace.
+Because this workspace currently forbids `unsafe_code`, the first implemented slice is FFI-ready rather than a raw exported C ABI. The Rust runtime now exposes flat wire types and a blocking opaque-handle bridge in safe Rust, and `cratestack-client-flutter` now wraps that bridge for Dart or Flutter callers without introducing raw pointer code in this workspace.
 
 ## Bridge Payloads
 
@@ -224,7 +224,7 @@ Current implemented bridge payload flow:
 
 Why this exists:
 
-1. it removes `CoolstackWireCodec` from the generated Dart seam
+1. it removes `CrateStackWireCodec` from the generated Dart seam
 2. it keeps the bridge byte-only and FFI-friendly
 3. it keeps HTTP transport codec ownership in Rust
 4. it avoids making Dart or Flutter aware of CBOR, JSON transport fallback, or future COSE envelopes
@@ -287,29 +287,29 @@ The first spike is intentionally narrow.
 
 Implemented in this repo:
 
-1. a new `coolstack-client-rust` crate
-2. CBOR-first request and response handling through `coolstack-codec-cbor`
+1. a new `cratestack-client-rust` crate
+2. CBOR-first request and response handling through `cratestack-codec-cbor`
 3. request journaling through a `ClientStateStore` trait
 4. an in-memory store plus a JSON-file store for bootstrap and tests
-5. a new `coolstack-client-store-sqlite` crate for durable request-journal and state-version persistence
+5. a new `cratestack-client-store-sqlite` crate for durable request-journal and state-version persistence
 6. an FFI-ready runtime bridge with flat request, response, header, config, and error wire types
-7. a new `coolstack-client-flutter` crate that wraps the runtime bridge with safe Rust APIs for Dart or Flutter consumers
+7. a new `cratestack-client-flutter` crate that wraps the runtime bridge with safe Rust APIs for Dart or Flutter consumers
 8. one successful procedure call against generated Axum-compatible CBOR routes
 9. one CRUD error-path call against generated Axum-compatible CBOR routes
 10. a generated Dart runtime that now targets a byte-oriented bridge instead of owning Dio directly
 11. canonical typed Dart query helpers for `fields`, `include`, relation-specific `includeFields[path]`, `sort`, `limit`, `offset`, grouped `where=`, legacy `or=`, and resource-specific filters, plus per-model field/include constants for safer selection assembly
 12. generated Dart selection builders plus projected wrapper objects for `getSelected` / `listSelected`
-13. request-authorizer hooks in `coolstack-client-rust` built around canonical request strings so host integrations can attach signed-request headers without changing generated clients
+13. request-authorizer hooks in `cratestack-client-rust` built around canonical request strings so host integrations can attach signed-request headers without changing generated clients
 14. runtime-wide transport config for `cbor` and `json`, with a reserved future envelope seam
 15. documented target-state transport layering across codec, framing, and envelope, including a future `application/cbor-seq` path
-16. removal of `CoolstackWireCodec` from the generated Dart seam
+16. removal of `CrateStackWireCodec` from the generated Dart seam
 
 ```mermaid
 sequenceDiagram
     participant App as Flutter feature
     participant Dart as generated Dart API
     participant Bridge as runtime bridge
-    participant Rust as coolstack-client-rust
+    participant Rust as cratestack-client-rust
     participant API as generated CrateStack route
 
     App->>Dart: list(query: sort/where/limit)
@@ -335,7 +335,7 @@ Deferred from the spike:
 
 ## Current implementation note
 
-The current `coolstack-client-dart` crate should be treated as an experimental runtime-oriented and bridge-facing slice. It no longer owns Dio directly, renders through repo-managed templates that callers can override, and still uses generic value graphs for typed model conversion while the Rust-owned bridge and codec story continues to mature. The generated Dart APIs now expose canonical projection query options plus selection builders and projected wrappers for selected reads. On the Rust side, `coolstack-client-rust` now exposes additive request-authorizer hooks and a generated schema-native client facade over the same runtime. Selection-aware response typing is still intentionally incomplete overall, so callers should treat these projections as a contract-aligned safety improvement rather than assuming every narrowed selection is perfectly type-level exact.
+The current `cratestack-client-dart` crate should be treated as an experimental runtime-oriented and bridge-facing slice. It no longer owns Dio directly, renders through repo-managed templates that callers can override, and still uses generic value graphs for typed model conversion while the Rust-owned bridge and codec story continues to mature. The generated Dart APIs now expose canonical projection query options plus selection builders and projected wrappers for selected reads. On the Rust side, `cratestack-client-rust` now exposes additive request-authorizer hooks and a generated schema-native client facade over the same runtime. Selection-aware response typing is still intentionally incomplete overall, so callers should treat these projections as a contract-aligned safety improvement rather than assuming every narrowed selection is perfectly type-level exact.
 
 ## Examples
 
@@ -344,7 +344,7 @@ The current `coolstack-client-dart` crate should be treated as an experimental r
 CBOR-first transport with no envelope:
 
 ```rust
-use coolstack_client_rust::{
+use cratestack_client_rust::{
     RuntimeCodecConfig, RuntimeConfigWire, RuntimeEnvelopeConfig,
     RuntimeStateStoreConfig, RuntimeTransportConfig,
 };
@@ -362,7 +362,7 @@ let config = RuntimeConfigWire {
 JSON transport fallback with no envelope:
 
 ```rust
-use coolstack_client_rust::{
+use cratestack_client_rust::{
     RuntimeCodecConfig, RuntimeConfigWire, RuntimeEnvelopeConfig,
     RuntimeStateStoreConfig, RuntimeTransportConfig,
 };
@@ -370,7 +370,7 @@ use coolstack_client_rust::{
 let config = RuntimeConfigWire {
     base_url: "https://api.example.com".to_owned(),
     state_store: RuntimeStateStoreConfig::JsonFile {
-        path: "coolstack/tmp/runtime-state.json".into(),
+        path: "cratestack/tmp/runtime-state.json".into(),
     },
     transport: RuntimeTransportConfig {
         codec: RuntimeCodecConfig::Json,
@@ -382,7 +382,7 @@ let config = RuntimeConfigWire {
 ### Flutter Wrapper Config
 
 ```rust
-use coolstack_client_flutter::{
+use cratestack_client_flutter::{
     FlutterRuntimeCodec, FlutterRuntimeConfig, FlutterRuntimeEnvelope,
     FlutterRuntimeTransportConfig, FlutterStateStoreConfig,
 };
@@ -405,14 +405,14 @@ For `frontends/vaam-mobile`, treat the generated package and the runtime bridge 
 
 1. generate the Flutter-shaped package into `frontends/vaam-mobile/packages/<client_name>`
 2. add it as a path dependency in the mobile app
-3. provide a `CoolstackRuntimeBridge` implementation from the app side
+3. provide a `CrateStackRuntimeBridge` implementation from the app side
 4. override the generated Riverpod bridge provider
 
-From `coolstack/`, generation looks like:
+From `cratestack/`, generation looks like:
 
 ```bash
-cargo run -p coolstack-cli -- generate-dart \
-  --schema "crates/coolstack/tests/fixtures/blog.cool" \
+cargo run -p cratestack-cli -- generate-dart \
+  --schema "crates/cratestack/tests/fixtures/blog.cool" \
   --out "../frontends/vaam-mobile/packages/blog_client" \
   --library-name blog_client \
   --base-path "/api"
@@ -448,13 +448,13 @@ Use the generated package API today, but treat the bridge as the integration sea
 ### Generated Dart Usage
 
 ```dart
-final blogClient = BlogClientCoolstackClient(
-  CoolstackRuntime(myBridge),
+final blogClient = BlogClientCrateStackClient(
+  CrateStackRuntime(myBridge),
   basePath: '/api',
 );
 
 final posts = await blogClient.posts.list(
-  query: const CoolstackListQuery(sort: 'title'),
+  query: const CrateStackListQuery(sort: 'title'),
 );
 
 final post = await blogClient.posts.create(

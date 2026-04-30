@@ -10,7 +10,7 @@ This page is the smallest generic setup path for trying CrateStack in a Rust ser
 ## 1. Include A Schema
 
 ```rust
-use coolstack::include_schema;
+use cratestack::include_schema;
 
 include_schema!("schema.cool");
 ```
@@ -19,7 +19,7 @@ include_schema!("schema.cool");
 
 ```rust
 let pool = sqlx::PgPool::connect(&std::env::var("DATABASE_URL")?).await?;
-let cool = coolstack_schema::Coolstack::builder(pool).build();
+let cool = cratestack_schema::CrateStack::builder(pool).build();
 ```
 
 ## 3. Use Delegates Directly
@@ -31,12 +31,12 @@ let visible_posts = cool
     .post()
     .find_many()
     .where_expr(
-        coolstack_schema::post::author()
+        cratestack_schema::post::author()
             .email()
             .eq("owner@example.com")
-            .and(coolstack_schema::post::published().is_true()),
+            .and(cratestack_schema::post::published().is_true()),
     )
-    .order_by(coolstack_schema::post::author().email().desc())
+    .order_by(cratestack_schema::post::author().email().desc())
     .limit(20)
     .run(&ctx)
     .await?;
@@ -58,9 +58,9 @@ let posts = bound.post().find_many().run().await?;
 ```rust
 let app = axum::Router::new().nest(
     "/api",
-    coolstack_schema::axum::model_router(
+    cratestack_schema::axum::model_router(
         cool.clone(),
-        coolstack_codec_cbor::CborCodec,
+        cratestack_codec_cbor::CborCodec,
         AppAuthProvider,
     ),
 );

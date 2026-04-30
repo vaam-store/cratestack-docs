@@ -171,8 +171,8 @@ Each route should be able to express:
 
 Current generated public metadata surface:
 
-1. per-route constants in `coolstack_schema::axum`
-2. aggregated registry as `coolstack_schema::axum::ROUTE_TRANSPORTS`
+1. per-route constants in `cratestack_schema::axum`
+2. aggregated registry as `cratestack_schema::axum::ROUTE_TRANSPORTS`
 
 Current descriptor shape:
 
@@ -258,10 +258,10 @@ Recommended client defaults:
 
 Current repo reality:
 
-1. `coolstack-axum` now validates request and response headers against route transport capabilities rather than only a single router-wide codec assumption
-2. `coolstack-client-rust` sends a preferred `Accept` list and decodes by actual response `Content-Type`
+1. `cratestack-axum` now validates request and response headers against route transport capabilities rather than only a single router-wide codec assumption
+2. `cratestack-client-rust` sends a preferred `Accept` list and decodes by actual response `Content-Type`
 3. generated Rust client methods for list-returning procedures use explicit sequence-aware decode paths
-4. generated Axum metadata is publicly inspectable through `coolstack_schema::axum::ROUTE_TRANSPORTS`
+4. generated Axum metadata is publicly inspectable through `cratestack_schema::axum::ROUTE_TRANSPORTS`
 5. `catalog-service` wires generated routes with `CodecSet::new(CborCodec, JsonCodec)`, so its CrateStack-generated routes now support negotiated JSON and CBOR
 6. `catalog-service` does not currently have a list-returning generated procedure that exercises `application/cbor-seq`
 
