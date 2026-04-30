@@ -6,10 +6,9 @@ Target outcome:
 
 * start from `vaam-backends` with the catalog domain
 * keep one shared `.cool` schema for the catalog client contract
-* add one mobile Rust consumer crate under `frontends/vaam-mobile/rust/catalog-schema-rust`
-* import that Rust consumer crate into `frontends/vaam-mobile/rust/vaam_runtime`
 * generate a Dart package under `frontends/vaam-mobile/packages/gen-*`
 * import that generated Dart package into `frontends/vaam-mobile/pubspec.yaml`
+* keep mobile Rust focused on generic request execution, signing, and upload helpers in `frontends/vaam-mobile/rust/vaam_runtime`
 
 ## Current Repo Reality
 
@@ -36,8 +35,8 @@ Important generator constraints already observed in this repo:
 Implication:
 
 * Dart package generation is already automated.
-* Rust-side schema consumption is already usable, but the current workflow is to create a small hand-written Rust crate that uses `include_schema!` rather than running a separate Rust client generator command.
-* The live smoke under `frontends/vaam-mobile/rust/catalog-schema-rust/examples/live_smoke.rs` is the current end-to-end verification path for the compile-time-expanded Rust consumer crate and catalog service.
+* For `vaam-mobile`, schema-typed client consumption now lives on the generated Dart side rather than a mobile Rust schema consumer crate.
+* Mobile Rust still matters for generic request execution, signing, and upload prep, but not for schema-typed catalog APIs.
 
 ## Editor Setup
 
@@ -62,14 +61,14 @@ Recommended shared source-of-truth path:
 
 Recommended consumer paths:
 
-* Rust consumer crate: `frontends/vaam-mobile/rust/catalog-schema-rust`
 * Dart package: `frontends/vaam-mobile/packages/gen_catalog_client`
+* Rust runtime crate: `frontends/vaam-mobile/rust/vaam_runtime`
 
 This keeps:
 
 * the backend-owned schema close to the catalog service
-* the mobile Rust consumer inside the mobile Rust workspace
 * the mobile Dart consumer inside the Flutter package tree that `pubspec.yaml` already uses
+* the mobile Rust workspace focused on transport/runtime concerns instead of schema-typed catalog APIs
 
 ## Step 1: Author The First `catalog.cool` Schema
 
@@ -193,126 +192,18 @@ cargo build -p catalog-service
 
 Use this extra build step as a required guardrail, not an optional smoke test. `cratestack-cli -- check` validates schema structure, but it does not prove that the full Rust proc-macro expansion remains cheap enough or avoids Rust name collisions.
 
-## Step 3: Create The Mobile Rust Consumer Crate
+## Step 3: Keep Mobile Rust Generic
 
-Rust schema expansion is compile-time today.
+For `vaam-mobile`, do not create a schema-typed Rust consumer crate.
 
-Create a new crate at:
+Keep `frontends/vaam-mobile/rust/vaam_runtime` focused on:
 
-* `frontends/vaam-mobile/rust/catalog-schema-rust`
+* request signing
+* request execution
+* upload preparation
+* generic transport/codec bridging for the app's Dio stack
 
-Recommended `Cargo.toml`:
-
-```toml
-[package]
-name = "catalog_schema_rust"
-version = "0.1.0"
-edition = "2024"
-publish = false
-
-[dependencies]
-coolstack = { path = "../../../../cratestack/crates/coolstack" }
-cratestack-client-rust = { path = "../../../../cratestack/crates/cratestack-client-rust" }
-serde = { version = "1", features = ["derive"] }
-```
-
-Recommended `src/lib.rs`:
-
-```rust
-pub mod catalog_client {
-    cratestack::include_schema!("../../../../vaam-backends/services/catalog-service/schema/catalog.cool");
-}
-```
-
-What this gives you today:
-
-* generated model types
-* generated selection builders
-* generated schema-native Rust client facade
-* generated projection wrappers
-* generated procedure clients
-* generated relation includes for `ownerSummary` and `assets`
-
-Example usage from this crate itself:
-
-```rust
-use cratestack::client_rust::CrateStackClient;
-
-pub async fn fetch_product_example(
-    runtime: CrateStackClient,
-) -> Result<catalog_client::Product, cratestack::client_rust::ClientError> {
-    let client = catalog_client::client::Client::new(runtime);
-    client.products().get(&"prod_123".to_owned(), &[]).await
-}
-```
-
-## Step 4: Add The Rust Crate To The Mobile Rust Workspace
-
-Update `frontends/vaam-mobile/rust/Cargo.toml`:
-
-```toml
-[workspace]
-members = ["vaam_runtime", "catalog-schema-rust"]
-default-members = ["vaam_runtime"]
-resolver = "3"
-```
-
-## Step 5: Import The Rust Consumer Crate Into `vaam_runtime`
-
-The crate itself is not a generated folder. It is a hand-written Cargo crate that hosts `include_schema!` and exposes the compile-time-expanded Rust surface.
-
-Update `frontends/vaam-mobile/rust/vaam_runtime/Cargo.toml`:
-
-```toml
-[dependencies]
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["fmt", "std"] }
-vaam_auth_signing_core = { path = "../../../vaam_auth_signing/rust/core" }
-vaam_upload_prep_core = { path = "../../../vaam_upload_prep/rust/core" }
-catalog_schema_rust = { path = "../catalog-schema-rust" }
-```
-
-Example usage inside `vaam_runtime/src/lib.rs`:
-
-```rust
-use cratestack::client_rust::{ClientConfig, CrateStackClient};
-use catalog_schema_rust::catalog_client;
-use url::Url;
-
-pub async fn fetch_catalog_product() -> Result<(), cratestack::client_rust::ClientError> {
-    let runtime = CrateStackClient::cbor(ClientConfig::new(
-        Url::parse("https://catalog.example.test").expect("valid url"),
-    ));
-
-    let client = catalog_client::client::Client::new(runtime);
-    let selection = catalog_client::product::select()
-        .id()
-        .title()
-        .status()
-        .priceMinor()
-        .include_ownerSummary_selected(
-            catalog_client::owner::include_selection()
-                .displayName()
-                .nickname(),
-        )
-        .include_assets_selected(
-            catalog_client::asset::include_selection().id().kind().url(),
-        );
-
-    let product = client
-        .products()
-        .get_view(&"prod_123".to_owned(), &selection, &[])
-        .await?;
-
-    let _title = product.title()?;
-    let _status = product.status()?;
-    let _price_minor = product.priceMinor()?;
-    let _owner = product.ownerSummary()?;
-    let _assets = product.assets()?;
-
-    Ok(())
-}
-```
+The schema-typed mobile client surface now lives in the generated Dart package, not a mobile Rust crate.
 
 Verification from repo root:
 
@@ -537,32 +428,30 @@ This uses the current generated Dart surface accurately:
 * projection builders flattened into canonical query params by the generated package
 * generated procedure methods for special flows such as publish and uploads
 * generated relation wrappers for `ownerSummary` and `assets`
-* Riverpod integration through the generated runtime-bridge and base-path providers
+* Riverpod integration through the generated adapter and base-path providers
 
 ## Step 10: Recommended First E2E Scope
 
 For the first real repo adoption, keep the scope narrow:
 
 1. one backend-owned schema file at `vaam-backends/services/catalog-service/schema/catalog.cool`
-2. one Rust crate at `frontends/vaam-mobile/rust/catalog-schema-rust`
-3. one Dart package at `frontends/vaam-mobile/packages/gen_catalog_client`
-4. one selected product fetch in `vaam_runtime`
-5. one selected product fetch in Flutter
+2. one Dart package at `frontends/vaam-mobile/packages/gen_catalog_client`
+3. one Rust runtime crate at `frontends/vaam-mobile/rust/vaam_runtime`
+4. one projected product fetch in Flutter
+5. one Dio-to-Rust transport verification path in the mobile runtime wiring
 
 That is enough to validate:
 
 * schema shape
 * backend contract alignment
-* Rust compile-time generation path
 * Dart package generation path
 * first real schema ownership and client import ergonomics
+* mobile transport/runtime integration ergonomics
 
 ## Known Gaps
 
 This guide is accurate to the current repo, but these gaps still matter:
 
-* there is no `generate-rust` CLI command yet
-* the Rust path is a hand-written consumer crate that uses compile-time `include_schema!` expansion
 * `catalog-service` is still an early slice, so the schema should keep growing in narrow vertical steps
 * exact type-level projection remains stronger on Rust than on Dart
 * this first schema intentionally avoids `/products/mine` and other owner-specific convenience routes
@@ -570,7 +459,8 @@ This guide is accurate to the current repo, but these gaps still matter:
 * request-authorizer hooks exist in Rust, but full COSE transport completion is still deferred
 * current generated backend routing uses the CBOR codec path rather than the older JSON fallback behavior
 * current generated backend auth is intentionally simplified to header/context-based auth for this slice
-* the generated Dart package still depends on an app-provided runtime bridge; the fully exported Rust ABI path is still deferred
+* the generated Dart package now depends on an app-provided adapter seam; host apps still own Dio stack composition and interceptor policy
+* the mobile Rust transport path is currently generic and request-driven rather than schema-native
 * the Flutter-facing wrapper does not yet expose persisted state or runtime-configurable SQLite selection through the public Dart-facing surface
 
 ## Recommended Next Follow-Up
@@ -579,10 +469,9 @@ After this guide is used once for real, the highest-value follow-up is:
 
 1. extend `schema/catalog.cool` to the next real catalog slice
 2. regenerate `frontends/vaam-mobile/packages/gen_catalog_client`
-3. keep `frontends/vaam-mobile/rust/catalog-schema-rust` compiling against the updated schema
+3. keep the mobile adapter/interceptor wiring aligned with the regenerated package
 4. record the friction points
 5. decide whether the next improvement should be:
-    - a real `generate-rust` CLI command
     - public-read/protected-write router splitting in CrateStack
     - JSON fallback for generated backend routes
     - better shared schema placement/tooling
