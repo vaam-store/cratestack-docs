@@ -241,6 +241,124 @@ final postCardProvider = FutureProvider.family((ref, int id) async {
 });
 ```
 
+Flutter or Riverpod `@@paged` full-model example:
+
+```dart
+final pagedPostsProvider = FutureProvider((ref) async {
+  final client = ref.watch(blogClientClientProvider);
+  final selection = PostSelection()
+    ..id()
+    ..title()
+    ..author((author) => author.email());
+
+  return client.post.list(
+    query: selection.toListQuery(
+      sort: '-id',
+      limit: 20,
+      offset: 0,
+      where: 'published=true',
+    ),
+  );
+});
+```
+
+Flutter or Riverpod `@@paged` projection example:
+
+```dart
+final pagedPostCardsProvider = FutureProvider((ref) async {
+  final client = ref.watch(blogClientClientProvider);
+  final selection = PostSelection()
+    ..id()
+    ..title()
+    ..author((author) => author.email());
+
+  return client.post.listView(
+    projection: selection.asProjection(),
+    query: const CrateStackListQuery(
+      limit: 20,
+      offset: 0,
+      sort: '-id',
+      where: 'published=true',
+    ),
+  );
+});
+
+String describeProjectedPage(Page<ProjectedPost> page) {
+  return 'items=${page.items.length} total=${page.totalCount} hasNext=${page.pageInfo.hasNextPage}';
+}
+```
+
+Flutter UI example:
+
+```dart
+class PostListScreen extends ConsumerWidget {
+  const PostListScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final page = ref.watch(pagedPostsProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Posts')),
+      body: page.when(
+        data: (page) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('Total: ${page.totalCount ?? page.items.length}'),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: page.items.length,
+                itemBuilder: (context, index) {
+                  final post = page.items[index];
+                  return ListTile(
+                    title: Text(post.title),
+                    subtitle: Text('hasNextPage=${page.pageInfo.hasNextPage}'),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(child: Text('$error')),
+      ),
+    );
+  }
+}
+
+class PostCardView extends ConsumerWidget {
+  const PostCardView({super.key, required this.id});
+
+  final int id;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final post = ref.watch(postCardProvider(id));
+
+    return post.when(
+      data: (post) => Card(
+        child: ListTile(
+          title: Text(post.title ?? ''),
+          subtitle: Text(post.author?.email ?? ''),
+        ),
+      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => Center(child: Text('$error')),
+    );
+  }
+}
+```
+
+For `@@paged` models:
+
+1. `list(...)` returns `Page<Model>`
+2. `listView(...)` returns `Page<ProjectedModel>`
+3. the paging envelope stays stable at `items`, `totalCount`, and `pageInfo`
+4. only the item type changes between full-model and projected flows
+
 Rust-side generated caller shape:
 
 ```rust
