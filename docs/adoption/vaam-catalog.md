@@ -303,6 +303,22 @@ This creates a Flutter-shaped package under:
 
 Re-run that same command any time the source `.cool` schema changes or the Dart generator/templates change. Generated packages are materialized output, so enum additions or other type-shape changes do not appear in `gen_catalog_client` until you regenerate it.
 
+For example, after adding:
+
+```cool
+enum OwnerType {
+  merchant
+  user
+}
+
+model Product {
+  id String @id
+  ownerType OwnerType
+}
+```
+
+you need to rerun `generate-dart` before `gen_catalog_client` exposes `OwnerType` in its Dart API.
+
 The generated output is a real Flutter-style package, not a single loose Dart file. Expect:
 
 * `pubspec.yaml`
@@ -315,6 +331,28 @@ The generated output is a real Flutter-style package, not a single loose Dart fi
 * `test/gen_catalog_client_test.dart`
 
 If the schema declares enums, the generated package now emits real Dart `enum` types in `lib/src/models.dart` and uses them across generated inputs, projected wrappers, and procedure surfaces.
+
+Example generated Dart shape:
+
+```dart
+enum OwnerType {
+  merchant('merchant'),
+  user('user');
+
+  const OwnerType(this.wireName);
+
+  final String wireName;
+
+  Object toWire() => wireName;
+}
+
+class Product {
+  const Product({required this.id, required this.ownerType});
+
+  final String id;
+  final OwnerType ownerType;
+}
+```
 
 ## Step 7: Import The Dart Package Into `vaam-mobile`
 

@@ -160,6 +160,46 @@ The typed Dart surface still exposes raw `fields`, `include`, and relation-speci
 
 Schema enums now flow through that generated surface as real Dart enums rather than plain `String` fields. Generated `fromWire()` and `toWire()` helpers map enum wire names at the package edge, while the underlying runtime still transports generic value graphs.
 
+Example:
+
+```cool
+enum Role {
+  admin
+  member
+}
+
+type RoleFilters {
+  requiredRole Role
+}
+
+procedure resolveRole(filter: RoleFilters): Role
+```
+
+becomes a generated Dart surface shaped like:
+
+```dart
+enum Role {
+  admin('admin'),
+  member('member');
+
+  const Role(this.wireName);
+  final String wireName;
+
+  static Role fromWire(Object? value) { ... }
+  Object toWire() => wireName;
+}
+
+class RoleFilters {
+  const RoleFilters({required this.requiredRole});
+
+  final Role requiredRole;
+}
+
+final role = await client.procedures.resolveRole(
+  const ResolveRoleArgs(filter: RoleFilters(requiredRole: Role.admin)),
+);
+```
+
 Why that matters in practice:
 
 ```dart
@@ -681,11 +721,56 @@ In that flow:
 
 That same regeneration flow is also the answer when generated packages lag behind schema changes: re-run `coolstack-cli generate-dart` for the target package after changing the `.cool` schema or the generator/templates.
 
+Example:
+
+```bash
+cargo run -p coolstack-cli -- generate-dart \
+  --schema "../vaam-backends/services/auth-service/schema/auth.cool" \
+  --out "../frontends/vaam-mobile/packages/gen_auth_client" \
+  --library-name gen_auth_client \
+  --base-path "/api"
+```
+
 Current enum limitation:
 
 1. generated Rust and Dart clients understand schema enums
 2. read-policy literal lowering still only accepts required `Boolean`, `Int`, and `String` fields for literal comparisons at macro expansion time
 3. to support enum fields in expressions like `field == "active"` or `auth().role == "admin"`, extend macro lowering to recognize required enum fields and lower those literals as string-backed policy literals
+
+Concrete boundary example:
+
+```cool
+enum PaymentInstrumentStatus {
+  active
+  inactive
+}
+
+model PaymentInstrument {
+  id String @id
+  status PaymentInstrumentStatus
+}
+```
+
+This is supported for generated Rust and Dart clients.
+
+```cool
+enum Role {
+  admin
+  user
+}
+
+auth SessionUser {
+  role Role
+}
+
+model AdminOnlyView {
+  id String @id
+
+  @@allow("read", auth().role == "admin")
+}
+```
+
+This still needs the policy-literal lowering extension described above.
 
 ## Use Cases
 
