@@ -301,6 +301,8 @@ This creates a Flutter-shaped package under:
 
 * `frontends/vaam-mobile/packages/gen_catalog_client`
 
+Re-run that same command any time the source `.cool` schema changes or the Dart generator/templates change. Generated packages are materialized output, so enum additions or other type-shape changes do not appear in `gen_catalog_client` until you regenerate it.
+
 The generated output is a real Flutter-style package, not a single loose Dart file. Expect:
 
 * `pubspec.yaml`
@@ -311,6 +313,8 @@ The generated output is a real Flutter-style package, not a single loose Dart fi
 * `lib/src/...`
 * `example/main.dart`
 * `test/gen_catalog_client_test.dart`
+
+If the schema declares enums, the generated package now emits real Dart `enum` types in `lib/src/models.dart` and uses them across generated inputs, projected wrappers, and procedure surfaces.
 
 ## Step 7: Import The Dart Package Into `vaam-mobile`
 

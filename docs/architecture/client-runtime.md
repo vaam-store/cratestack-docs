@@ -158,6 +158,8 @@ final post = await client.post.get(
 
 The typed Dart surface still exposes raw `fields`, `include`, and relation-specific `includeFields[path]`, because generated clients still ride the canonical HTTP contract directly. The ergonomic path is to express those through generated selection builders and lower them with `toListQuery(...)` or `toFetchQuery()` when you want plain model-returning calls.
 
+Schema enums now flow through that generated surface as real Dart enums rather than plain `String` fields. Generated `fromWire()` and `toWire()` helpers map enum wire names at the package edge, while the underlying runtime still transports generic value graphs.
+
 Why that matters in practice:
 
 ```dart
@@ -676,6 +678,14 @@ In that flow:
 4. Rust performs the HTTP request and decodes the response
 5. Rust returns bridge JSON bytes
 6. Dart reconstructs typed models through `fromWire()`
+
+That same regeneration flow is also the answer when generated packages lag behind schema changes: re-run `coolstack-cli generate-dart` for the target package after changing the `.cool` schema or the generator/templates.
+
+Current enum limitation:
+
+1. generated Rust and Dart clients understand schema enums
+2. read-policy literal lowering still only accepts required `Boolean`, `Int`, and `String` fields for literal comparisons at macro expansion time
+3. to support enum fields in expressions like `field == "active"` or `auth().role == "admin"`, extend macro lowering to recognize required enum fields and lower those literals as string-backed policy literals
 
 ## Use Cases
 
