@@ -137,16 +137,13 @@ Dart should own:
 Example caller shape on the Dart side:
 
 ```dart
+final selection = PostSelection()
+  ..id()
+  ..title()
+  ..author((author) => author.email());
+
 final posts = await client.post.list(
-  query: const CrateStackListQuery(
-    // Trim the primary resource payload for list rendering.
-    fields: [PostFieldNames.id, PostFieldNames.title],
-    // Ask the server to embed a declared relation path.
-    include: [PostIncludeNames.author],
-    includeFields: {
-      // Trim the embedded relation payload separately.
-      PostIncludeNames.author: [UserFieldNames.email],
-    },
+  query: selection.toListQuery(
     sort: '-id',
     limit: 20,
     where: 'published=true',
@@ -155,17 +152,94 @@ final posts = await client.post.list(
 
 final post = await client.post.get(
   1,
-  query: const CrateStackFetchQuery(),
+  query: selection.toFetchQuery(),
 );
 ```
 
-The typed Dart surface now exposes raw `fields`, `include`, and relation-specific `includeFields[path]`, because generated clients still ride the canonical HTTP contract directly. The generic value-graph conversion layer means callers should use those options intentionally whenever response shape becomes projection-sensitive.
+The typed Dart surface still exposes raw `fields`, `include`, and relation-specific `includeFields[path]`, because generated clients still ride the canonical HTTP contract directly. The ergonomic path is to express those through generated selection builders and lower them with `toListQuery(...)` or `toFetchQuery()` when you want plain model-returning calls.
+
+Why that matters in practice:
+
+```dart
+// Before
+final posts = await client.post.list(
+  query: const CrateStackListQuery(
+    fields: [PostFieldNames.id, PostFieldNames.title],
+    include: [PostIncludeNames.author],
+    includeFields: {
+      PostIncludeNames.author: [UserFieldNames.email],
+    },
+    sort: '-id',
+    limit: 20,
+    where: 'published=true',
+  ),
+);
+
+// After
+final selection = PostSelection()
+  ..id()
+  ..title()
+  ..author((author) => author.email());
+
+final posts = await client.post.list(
+  query: selection.toListQuery(
+    sort: '-id',
+    limit: 20,
+    where: 'published=true',
+  ),
+);
+```
+
+That reduces boilerplate in three ways:
+
+1. one builder expresses root fields and nested includes together
+2. relation payload trimming stays colocated with the relation itself instead of being split across `include` and `includeFields[path]`
+3. screens can evolve faster because adding one more field or nested relation is just one more builder call instead of coordinated string-list edits
 
 Recommended client-side reading:
 
-1. use `fields` when the primary model can be narrowed safely for a screen or cache entry
-2. use `include` when one declared relation path should arrive with the main record
-3. use `includeFields[path]` when that related payload should stay compact as well
+1. use a generated selection builder plus `toListQuery(...)` or `toFetchQuery()` for most projection-shaped reads
+2. drop to raw `fields`, `include`, and `includeFields[path]` only when app code needs to assemble those query parts dynamically
+3. use `selection.asProjection()` with `getView(...)` or `listView(...)` when the caller should receive projected wrapper types instead of full models
+
+Generated field/include constants still have a role. Keep them for app-owned dynamic query composition, user-configurable column or field pickers, persisted query preferences, and any code path where the query shape is not known ahead of time as one generated builder flow.
+
+Flutter or Riverpod selection example:
+
+```dart
+final postListProvider = FutureProvider((ref) async {
+  final client = ref.watch(blogClientClientProvider);
+  final selection = PostSelection()
+    ..id()
+    ..title()
+    ..author((author) => author.email());
+
+  return client.post.list(
+    query: selection.toListQuery(
+      sort: '-id',
+      limit: 20,
+      where: 'published=true',
+    ),
+  );
+});
+```
+
+Flutter or Riverpod projection example:
+
+```dart
+final postCardProvider = FutureProvider.family((ref, int id) async {
+  final client = ref.watch(blogClientClientProvider);
+  final selection = PostSelection()
+    ..id()
+    ..title()
+    ..author((author) => author.email());
+
+  return client.post.getView(
+    id,
+    projection: selection.asProjection(),
+  );
+});
+```
 
 Rust-side generated caller shape:
 
@@ -453,8 +527,12 @@ final blogClient = BlogClientCrateStackClient(
   basePath: '/api',
 );
 
+final selection = PostSelection()
+  ..id()
+  ..title();
+
 final posts = await blogClient.posts.list(
-  query: const CrateStackListQuery(sort: 'title'),
+  query: selection.toListQuery(sort: 'title'),
 );
 
 final post = await blogClient.posts.create(
