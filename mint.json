@@ -1,0 +1,52 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "CoolStack",
+  "theme": "mint",
+  "navigation": [
+    {
+      "group": "Overview",
+      "pages": [
+        "index",
+        "overview/current-state",
+        "getting-started/quickstart"
+      ]
+    },
+    {
+      "group": "Guides",
+      "pages": [
+        "guides/auth-provider",
+        "guides/telemetry",
+        "adoption/vaam-catalog"
+      ]
+    },
+    {
+      "group": "Architecture",
+      "pages": [
+        "architecture/transport-architecture",
+        "architecture/http-transport-contract",
+        "architecture/client-runtime"
+      ]
+    },
+    {
+      "group": "Tooling",
+      "pages": [
+        "tooling/editor-tooling"
+      ]
+    },
+    {
+      "group": "Reference",
+      "pages": [
+        "reference/auth-support-matrix"
+      ]
+    },
+    {
+      "group": "Internals",
+      "pages": [
+        "internals/core-architecture-adr",
+        "internals/mcp-operator-adr",
+        "internals/product-requirements",
+        "internals/package-selection"
+      ]
+    }
+  ]
+}

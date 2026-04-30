@@ -1,0 +1,45 @@
+---
+title: Current State
+description: Verified summary of what CoolStack implements today and what is still intentionally deferred.
+---
+
+# Current State
+
+CoolStack already provides a usable Rust-first backend slice, but it is not yet the full target architecture described in the ADR and PRD.
+
+## Implemented Today
+
+1. a Rust 2024 multi-crate workspace under `coolstack/`
+2. schema parsing and semantic validation for an initial `.cool` subset
+3. compile-time `include_schema!` expansion into a generated `coolstack_schema` module
+4. SQLx-backed model delegates for `create`, `find_many`, `find_unique`, `update`, and `delete`
+5. generated Axum model CRUD and procedure routes
+6. host-owned authentication through `AuthProvider` and internal binding through `bind_auth(...)` and `bind_context(...)`
+7. generated Rust client support and generated Dart package output
+8. policy enforcement for the current supported model and procedure policy subset
+9. generated telemetry for procedure wrappers, procedure routes, and model list routes
+
+## Still Narrow Or Deferred
+
+1. COSE transport remains an unimplemented envelope seam
+2. negotiated multi-codec routing is not complete end-to-end
+3. the parser still validates only an initial schema subset
+4. production-stable exact non-Rust selection typing is not complete
+5. richer exposure controls and some field-level policy features are still deferred
+6. the client runtime remains partially spiked rather than fully mature
+
+## Best Fit Right Now
+
+CoolStack is currently strongest for:
+
+1. internal CRUD-heavy Rust services
+2. teams that want one schema to drive delegates, routes, and client contracts
+3. services that benefit from generated policy checks and typed query builders
+4. CBOR-first or CBOR-aware HTTP APIs that still need JSON fallback
+
+## Read Next
+
+1. `../getting-started/quickstart` for a minimal setup path
+2. `../guides/auth-provider` for the host auth boundary
+3. `../architecture/transport-architecture` for transport design
+4. `../reference/auth-support-matrix` for the current auth and policy surface

@@ -1,0 +1,73 @@
+---
+title: Quickstart
+description: Minimal generic setup for consuming a CoolStack schema in Rust, with or without generated HTTP routes.
+---
+
+# Quickstart
+
+This page is the smallest generic setup path for trying CoolStack in a Rust service.
+
+## 1. Include A Schema
+
+```rust
+use coolstack::include_schema;
+
+include_schema!("schema.cool");
+```
+
+## 2. Build The Generated Runtime
+
+```rust
+let pool = sqlx::PgPool::connect(&std::env::var("DATABASE_URL")?).await?;
+let cool = coolstack_schema::Coolstack::builder(pool).build();
+```
+
+## 3. Use Delegates Directly
+
+You can use CoolStack without mounting the generated REST layer.
+
+```rust
+let visible_posts = cool
+    .post()
+    .find_many()
+    .where_expr(
+        coolstack_schema::post::author()
+            .email()
+            .eq("owner@example.com")
+            .and(coolstack_schema::post::published().is_true()),
+    )
+    .order_by(coolstack_schema::post::author().email().desc())
+    .limit(20)
+    .run(&ctx)
+    .await?;
+```
+
+## 4. Optionally Bind Auth For Internal Callers
+
+```rust
+let bound = cool.bind_auth(Some(serde_json::json!({
+    "id": 7,
+    "role": "admin"
+})))?;
+
+let posts = bound.post().find_many().run().await?;
+```
+
+## 5. Optionally Mount Generated Routers
+
+```rust
+let app = axum::Router::new().nest(
+    "/api",
+    coolstack_schema::axum::model_router(
+        cool.clone(),
+        coolstack_codec_cbor::CborCodec,
+        AppAuthProvider,
+    ),
+);
+```
+
+## Read Next
+
+1. `../guides/auth-provider` for the host auth boundary
+2. `../architecture/transport-architecture` for codec, framing, and envelope rules
+3. `../adoption/vaam-catalog` for the longer repo-local adoption guide

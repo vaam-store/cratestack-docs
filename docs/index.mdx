@@ -1,0 +1,36 @@
+---
+title: CoolStack
+description: Schema-first Rust framework for typed SQLx-backed delegates, generated APIs, and generated clients.
+---
+
+# CoolStack
+
+CoolStack is a Rust-native, schema-first framework for building typed PostgreSQL-backed services from `.cool` files.
+
+The verified current slice in this repo is strongest at:
+
+1. compile-time schema validation with `include_schema!`
+2. generated SQLx-backed model delegates
+3. generated Axum CRUD and procedure routes
+4. host-owned auth with generated policy enforcement
+5. generated Rust and Dart client surfaces
+
+The implementation is still narrower than the broader target architecture.
+
+Current gaps that matter when adopting it:
+
+1. COSE transport is not implemented yet
+2. the client runtime is still a partial spike
+3. the parser still covers an initial schema subset
+4. some exposure and field-level policy controls are still deferred
+
+Start here:
+
+1. `overview/current-state` for the verified current-state summary
+2. `getting-started/quickstart` for a minimal generic setup path
+3. `guides/auth-provider` for the host auth boundary
+4. `architecture/transport-architecture` for transport model decisions
+
+Repo note:
+
+This documentation tree is organized to be Mintlify-ready and easy to extract later into a standalone public docs site. The current branding still matches the repo name, `CoolStack`.
