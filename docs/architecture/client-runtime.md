@@ -160,6 +160,8 @@ The typed Dart surface still exposes raw `fields`, `include`, and relation-speci
 
 Schema enums now flow through that generated surface as real Dart enums rather than plain `String` fields. Generated `fromWire()` and `toWire()` helpers map enum wire names at the package edge, while the underlying runtime still transports generic value graphs.
 
+That means callers get typed enums at the API edge, while the transport still does the boring but reliable wire-format work underneath. 🧰
+
 Example:
 
 ```cool
@@ -736,6 +738,11 @@ Current enum limitation:
 1. generated Rust and Dart clients understand schema enums
 2. read-policy literal lowering still only accepts required `Boolean`, `Int`, and `String` fields for literal comparisons at macro expansion time
 3. to support enum fields in expressions like `field == "active"` or `auth().role == "admin"`, extend macro lowering to recognize required enum fields and lower those literals as string-backed policy literals
+
+So the current rule of thumb is simple:
+
+1. use enums freely for generated client-facing data shapes
+2. be more careful when the same field is compared against string literals inside schema policies
 
 Concrete boundary example:
 

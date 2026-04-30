@@ -287,6 +287,8 @@ For newer integrations, prefer binding structured principals when actor/session/
 
 ## Step 6: Generate The Dart Package
 
+This is the step where the schema stops being a nice idea and starts becoming app code. ✨
+
 From `cratestack/`:
 
 ```bash
@@ -302,6 +304,8 @@ This creates a Flutter-shaped package under:
 * `frontends/vaam-mobile/packages/gen_catalog_client`
 
 Re-run that same command any time the source `.cool` schema changes or the Dart generator/templates change. Generated packages are materialized output, so enum additions or other type-shape changes do not appear in `gen_catalog_client` until you regenerate it.
+
+If the schema changed but the generated package did not, that is not spooky action at a distance. It just means the generator has not been run again yet. 👻
 
 For example, after adding:
 
@@ -331,6 +335,8 @@ The generated output is a real Flutter-style package, not a single loose Dart fi
 * `test/gen_catalog_client_test.dart`
 
 If the schema declares enums, the generated package now emits real Dart `enum` types in `lib/src/models.dart` and uses them across generated inputs, projected wrappers, and procedure surfaces.
+
+That keeps feature code nicer too: less `'merchant'` string soup, more actual types. 🍜
 
 Example generated Dart shape:
 
