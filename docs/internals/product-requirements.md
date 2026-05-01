@@ -1595,23 +1595,23 @@ Even though the primary integration is `include_schema!`, a CLI is useful for va
 Required v0 CLI commands:
 
 ```bash
-coolstack check --schema schema.cool
-coolstack print-ir --schema schema.cool
+cratestack check --schema schema.cool
+cratestack print-ir --schema schema.cool
 ```
 
 Optional v0 commands:
 
 ```bash
-coolstack format --schema schema.cool
-coolstack sql --schema schema.cool
+cratestack format --schema schema.cool
+cratestack sql --schema schema.cool
 ```
 
 Deferred commands:
 
 ```bash
-coolstack migrate dev
-coolstack db push
-coolstack introspect
+cratestack migrate dev
+cratestack db push
+cratestack introspect
 ```
 
 ---
@@ -1717,7 +1717,7 @@ Current limitations:
 * Policy parsing is still compile-time only inside the macro layer, and unsupported policy expressions fail code generation.
 * Write-policy enforcement now exists for `create`, `update`, and `delete`, but only for the same tiny predicate subset used by the current read-policy implementation.
 * Create policies are evaluated against generated input values plus auth context before insertion, while update/delete policies are injected into SQL row scoping; create-time auth-derived defaults now support the narrow `@default(auth().field)` form before create-policy evaluation.
-* DB-backed policy integration coverage now exists behind an env-gated test path using `COOLSTACK_TEST_DATABASE_URL`.
+* DB-backed policy integration coverage now exists behind an env-gated test path using `CRATESTACK_TEST_DATABASE_URL`.
 * The current executable auth/policy capability matrix now lives in `../reference/auth-support-matrix.md`.
 * Procedure-level policy execution now exists through generated runtime wrappers under `cratestack_schema::procedures::*` and reuses canonical policy types from `cratestack-policy`.
 * The current procedure-policy subset now supports grouped `&&` / `||`, `auth() == null`, nested `args.<field>` access, input-vs-auth comparisons, and input-vs-input comparisons, but it still does not expose a general DB-querying procedure policy language.
@@ -1727,7 +1727,7 @@ Current limitations:
 * Generated Axum model routes now exist for `GET /{modelPlural}`, `GET /{modelPlural}/{id}`, `POST /{modelPlural}`, `PATCH /{modelPlural}/{id}`, and `DELETE /{modelPlural}/{id}` and reuse the same codec/context/policy pattern.
 * The generated HTTP layer now enforces a single configured codec per router for `Accept` and `Content-Type`, returning `406 Not Acceptable` and `415 Unsupported Media Type` for mismatches.
 * The current HTTP model slice is still intentionally narrow: list routes now expose canonical `fields`, shallow declared-relation `include`, relation-specific `includeFields[relation]`, canonical `sort`, `limit`, `offset`, scalar equality filters, a small operator suffix set (`__ne`, `__lt`, `__lte`, `__gt`, `__gte`, `__in`, `__contains`, `__startsWith`, `__isNull`) with `cuid`, UUID, and DateTime parsing, canonical grouped `where=` expressions with `not(...)` > `,` (AND) > `|` (OR) precedence and left-associative chaining, and recursive relation filters backed by explicit `@relation(fields:[...],references:[...])` metadata, with to-many traversal requiring explicit `some` / `every` / `none` quantifiers and any to-many `sort` path remaining unsupported. Legacy `orderBy` is still accepted only as a compatibility alias. The route grammar remains narrower than the full generated delegate/runtime filter surface, while write routes forward directly into the generated delegate/runtime layer without a richer request DSL.
-* `cratestack/compose.yml` now provides a local PostgreSQL 18 instance for driving DB-backed tests through `COOLSTACK_TEST_DATABASE_URL`.
+* `cratestack/compose.yml` now provides a local PostgreSQL 18 instance for driving DB-backed tests through `CRATESTACK_TEST_DATABASE_URL`.
 * Arbitrary policy functions, explicit impersonation/acting-as semantics, and a general DB-querying procedure policy language remain future work.
 
 ## Milestone 0: Project Skeleton

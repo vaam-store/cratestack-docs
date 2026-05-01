@@ -1,12 +1,12 @@
 ## Studio Handoff
 
-This file is the shortest path for the next developer picking up CoolStack Studio work.
+This file is the shortest path for the next developer picking up CrateStack Studio work.
 
 Read this first, then confirm details in `current-state.md`.
 
 ## Current Goal
 
-The current generator supports one Studio workspace from one or more `.cool` files.
+The current generator supports one Studio workspace from one or more `.cstack` files.
 
 The generated app is:
 
@@ -27,17 +27,17 @@ It was generated from all current VAAM backend schemas.
 
 If behavior changes start here:
 
-1. `coolstack/crates/coolstack-cli/src/main.rs`
-2. `coolstack/crates/coolstack-studio-generator/src/lib.rs`
-3. `coolstack/crates/coolstack-studio-generator/templates/backend/**`
-4. `coolstack/crates/coolstack-studio-generator/templates/shared/**`
-5. `coolstack/crates/coolstack-studio-generator/templates/web/**`
+1. `cratestack/crates/cratestack-cli/src/main.rs`
+2. `cratestack/crates/cratestack-studio-generator/src/lib.rs`
+3. `cratestack/crates/cratestack-studio-generator/templates/backend/**`
+4. `cratestack/crates/cratestack-studio-generator/templates/shared/**`
+5. `cratestack/crates/cratestack-studio-generator/templates/web/**`
 
 If docs change start here:
 
 1. `cratestack-docs/docs/studio/current-state.md`
 2. `cratestack-docs/docs/studio/README.md`
-3. `coolstack/README.md`
+3. `cratestack/README.md`
 
 ## Current Multi-Context Flow
 
@@ -54,8 +54,8 @@ The implemented flow today is:
 
 These checks were already run successfully against the current implementation:
 
-1. `cargo test -p coolstack-studio-generator`
-2. `cargo test -p coolstack-cli`
+1. `cargo test -p cratestack-studio-generator`
+2. `cargo test -p cratestack-cli`
 3. fresh multi-context generation into a new output directory
 4. `cargo check --workspace` inside the generated workspace
 5. `cargo run -p <generated-backend-crate>` inside the generated workspace

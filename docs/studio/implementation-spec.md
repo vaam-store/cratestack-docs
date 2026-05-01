@@ -4,7 +4,7 @@ This document turns the Studio idea into an implementation target.
 
 Scope of this spec:
 
-1. `coolstack generate-studio` CLI shape
+1. `cratestack generate-studio` CLI shape
 2. generated Rust backend layout
 3. generated Yew frontend layout
 4. first metadata API types and functions
@@ -27,7 +27,7 @@ The output should be a full-stack app:
 ### Proposed Command
 
 ```bash
-coolstack generate-studio \
+cratestack generate-studio \
   --schema "../vaam-backends/services/payment-gateway/schema/payment.cool" \
   --out "../tools/studios/payment-gateway-studio" \
   --name payment-gateway-studio \
@@ -368,7 +368,7 @@ Define the first Rust-native metadata surface that `include_schema!` should gene
 ### Generated Rust Surface
 
 ```rust
-pub mod coolstack_schema {
+pub mod cratestack_schema {
     pub mod studio {
         pub fn metadata() -> StudioMetadata;
         pub fn service_name() -> &'static str;
@@ -509,7 +509,7 @@ Those can come later without changing the core idea.
 
 ## Suggested Implementation Order
 
-1. add `GenerateStudio` command to `coolstack-cli`
+1. add `GenerateStudio` command to `cratestack-cli`
 2. add generator crate or module for Studio output
 3. add generated Studio metadata Rust types
 4. add generated backend shell

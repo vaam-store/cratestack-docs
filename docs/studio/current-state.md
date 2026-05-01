@@ -1,6 +1,6 @@
 ## Current State
 
-This document is the verified current-state snapshot for CoolStack Studio.
+This document is the verified current-state snapshot for CrateStack Studio.
 
 It is intentionally different from the target-state design docs in this folder.
 
@@ -10,7 +10,7 @@ If this file conflicts with another Studio doc, prefer this file.
 
 Current implementation is a generated full-stack Studio app with:
 
-1. one or more `.cool` schemas as input
+1. one or more `.cstack` schemas as input
 2. one generated Rust workspace as output
 3. Rust backend
 4. Yew frontend
@@ -19,10 +19,10 @@ Current implementation is a generated full-stack Studio app with:
 Current generator entrypoint:
 
 ```bash
-coolstack generate-studio \
-  --schema ../vaam-backends/services/auth-service/schema/auth.cool \
+cratestack generate-studio \
+  --schema ../vaam-backends/services/auth-service/schema/auth.cstack \
   --service-url http://127.0.0.1:8081 \
-  --schema ../vaam-backends/services/vendor-service/schema/vendor.cool \
+  --schema ../vaam-backends/services/vendor-service/schema/vendor.cstack \
   --service-url http://127.0.0.1:8082 \
   --out ../tools/studios/vaam-backends-studio \
   --name vaam-backends-studio
@@ -52,12 +52,12 @@ That means:
 
 Direct database access is not implemented.
 
-Multi-schema or multi-`.cool` support is implemented through repeated CLI pairs.
+Multi-schema or multi-`.cstack` support is implemented through repeated CLI pairs.
 
 There is currently no generated manifest that maps:
 
-1. `.cool` file to API URL
-2. `.cool` file to DB URL
+1. `.cstack` file to API URL
+2. `.cstack` file to DB URL
 3. display label to schema context
 
 ## Generated Backend
@@ -239,11 +239,11 @@ Canonical generated multi-context output for this repo currently lives at:
 
 If you need to change generation behavior, the primary source files are:
 
-1. `coolstack/crates/coolstack-cli/src/main.rs`
-2. `coolstack/crates/coolstack-studio-generator/src/lib.rs`
-3. `coolstack/crates/coolstack-studio-generator/templates/backend/**`
-4. `coolstack/crates/coolstack-studio-generator/templates/shared/**`
-5. `coolstack/crates/coolstack-studio-generator/templates/web/**`
+1. `cratestack/crates/cratestack-cli/src/main.rs`
+2. `cratestack/crates/cratestack-studio-generator/src/lib.rs`
+3. `cratestack/crates/cratestack-studio-generator/templates/backend/**`
+4. `cratestack/crates/cratestack-studio-generator/templates/shared/**`
+5. `cratestack/crates/cratestack-studio-generator/templates/web/**`
 
 The latest implemented multi-context flow is:
 
@@ -256,8 +256,8 @@ The latest implemented multi-context flow is:
 
 Verified commands already run against this implementation are:
 
-1. `cargo test -p coolstack-studio-generator`
-2. `cargo test -p coolstack-cli`
+1. `cargo test -p cratestack-studio-generator`
+2. `cargo test -p cratestack-cli`
 3. fresh multi-context generation into a new output directory
 4. `cargo check --workspace` inside the generated workspace
 5. `cargo run -p <generated-backend-crate>` inside the generated workspace

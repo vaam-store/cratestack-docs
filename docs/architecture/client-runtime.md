@@ -721,12 +721,12 @@ In that flow:
 5. Rust returns bridge JSON bytes
 6. Dart reconstructs typed models through `fromWire()`
 
-That same regeneration flow is also the answer when generated packages lag behind schema changes: re-run `coolstack-cli generate-dart` for the target package after changing the `.cool` schema or the generator/templates.
+That same regeneration flow is also the answer when generated packages lag behind schema changes: re-run `cratestack-cli generate-dart` for the target package after changing the `.cool` schema or the generator/templates.
 
 Example:
 
 ```bash
-cargo run -p coolstack-cli -- generate-dart \
+cargo run -p cratestack-cli -- generate-dart \
   --schema "../vaam-backends/services/auth-service/schema/auth.cool" \
   --out "../frontends/vaam-mobile/packages/gen_auth_client" \
   --library-name gen_auth_client \

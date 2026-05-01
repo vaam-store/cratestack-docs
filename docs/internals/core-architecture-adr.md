@@ -646,7 +646,7 @@ The decision optimizes for:
 4. Procedure permissions should be checked before invoking application code.
 5. Errors should be encoded with the configured codec.
 6. If an envelope is configured, error responses should also be sealed unless request verification fails before a response context can be established.
-7. The CLI should provide `coolstack check` and `coolstack print-ir` to make macro debugging easier.
+7. The CLI should provide `cratestack check` and `cratestack print-ir` to make macro debugging easier.
 8. JSON support should live outside core.
 9. CBOR should be the first official codec implementation.
 10. COSE support should be optional and isolated in `cratestack-cose`.

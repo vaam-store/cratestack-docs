@@ -822,7 +822,7 @@ Status: ADOPT OPTIONAL
 Purpose:
 
 * format generated code for debug output
-* potential `coolstack print-code` CLI command
+* potential `cratestack print-code` CLI command
 
 Used by:
 
@@ -1217,8 +1217,8 @@ Status: ADOPT
 
 Purpose:
 
-* `coolstack check`
-* `coolstack print-ir`
+* `cratestack check`
+* `cratestack print-ir`
 * future commands
 
 Used by:
@@ -1648,7 +1648,7 @@ prettyplease = "0.2"
 
 # 17. Initial Cargo Feature Strategy
 
-## 17.1 Root `coolstack` Features
+## 17.1 Root `cratestack` Features
 
 Recommended root features:
 
@@ -1672,7 +1672,7 @@ default = []
 Then applications opt in explicitly:
 
 ```toml
-coolstack = { version = "0.1", default-features = false, features = ["postgres", "axum", "cbor"] }
+cratestack = { version = "0.1", default-features = false, features = ["postgres", "axum", "cbor"] }
 ```
 
 Recommendation:
@@ -1867,7 +1867,7 @@ For CrateStack v0, the team should proceed with these major decisions:
 The first repo implementation slice makes these choices explicit:
 
 1. `chrono` is the initial `DateTime` type.
-2. The implemented crates are `coolstack`, `cratestack-core`, `cratestack-parser`, `cratestack-policy`, `cratestack-macros`, `cratestack-codec-cbor`, `cratestack-codec-json`, `cratestack-axum`, `cratestack-cli`, and `cratestack-sqlx`.
+2. The implemented crates are `cratestack`, `cratestack-core`, `cratestack-parser`, `cratestack-policy`, `cratestack-macros`, `cratestack-codec-cbor`, `cratestack-codec-json`, `cratestack-axum`, `cratestack-cli`, and `cratestack-sqlx`.
 3. `cratestack-axum` and `cratestack-codec-json` are implemented, while `cratestack-cose` remains deferred.
 4. `cratestack-cli` prints the parsed IR with Rust debug formatting rather than a JSON renderer to keep JSON out of the initial dependency surface.
 5. The current SQLx slice supports generated delegate scaffolding for `create`, `find_many`, `find_unique`, `update`, and `delete`, along with generated create/update input structs.
@@ -1879,7 +1879,7 @@ The first repo implementation slice makes these choices explicit:
 11. Canonical policy literals, predicates, relation quantifiers, and procedure-policy evaluation now live in `cratestack-policy`, which is shared by macro lowering and runtime enforcement.
 12. The supported model-policy subset now includes list/detail read splits, recursive to-one traversal, dotted to-many quantifiers (`some` / `every` / `none`), nested auth paths, and create-time relation checks when the root join columns are available from create input or auth-derived defaults.
 13. Create, update, and delete policy enforcement now exists for the same canonical policy surface; create checks run against generated input values plus auth context after applying `@default(auth().field)` defaults, and create-time relation checks can trigger DB lookups when the required join columns are known.
-14. DB-backed integration coverage for policy enforcement now exists behind an env-gated test path using `COOLSTACK_TEST_DATABASE_URL`, and `cratestack/compose.yml` now provides a local PostgreSQL 18 target for that loop.
+14. DB-backed integration coverage for policy enforcement now exists behind an env-gated test path using `CRATESTACK_TEST_DATABASE_URL`, and `cratestack/compose.yml` now provides a local PostgreSQL 18 target for that loop.
 15. Procedure policy execution now exists through generated wrappers under `cratestack_schema::procedures::*`, supports grouped expressions plus nested `args.<field>` comparisons, and can delegate DB-backed row auth through `@authorize(Model, action, args.path)`.
 16. Built-in `Page<T>` procedure returns now exist for declared model/type items, lower to a canonical `items` / `totalCount` / `pageInfo` envelope, and decode through the generated Rust and Dart client surfaces without introducing general schema generics.
 17. Models can now opt into paged generated list responses with bare `@@paged`; that changes the generated top-level list route plus Rust/Dart `list(...)` and projection-driven `listView(...)` helpers to use `Page<Model>` / `Page<ProjectedModel>` while keeping non-paged models on plain array responses.

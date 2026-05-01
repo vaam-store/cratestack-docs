@@ -1,17 +1,17 @@
 ## CLI Patch Plan
 
-This document describes the exact patch plan for adding `coolstack generate-studio`.
+This document describes the exact patch plan for adding `cratestack generate-studio`.
 
 Design goal:
 
-1. keep `coolstack-cli` thin
+1. keep `cratestack-cli` thin
 2. match the current `generate-dart` command flow
 3. delegate real generation to a dedicated generator crate
 
 ## Command Shape
 
 ```bash
-coolstack generate-studio \
+cratestack generate-studio \
   --schema <SCHEMA> \
   --out <OUT> \
   --name <NAME> \
@@ -46,16 +46,16 @@ GenerateStudio {
 
 Existing:
 
-1. `coolstack/Cargo.toml`
-2. `coolstack/crates/coolstack-cli/Cargo.toml`
-3. `coolstack/crates/coolstack-cli/src/main.rs`
+1. `cratestack/Cargo.toml`
+2. `cratestack/crates/cratestack-cli/Cargo.toml`
+3. `cratestack/crates/cratestack-cli/src/main.rs`
 
 New:
 
-4. `coolstack/crates/coolstack-studio-generator/Cargo.toml`
-5. `coolstack/crates/coolstack-studio-generator/src/lib.rs`
-6. `coolstack/crates/coolstack-studio-generator/templates/**`
-7. `coolstack/crates/coolstack-studio-generator/tests/generator.rs`
+4. `cratestack/crates/cratestack-studio-generator/Cargo.toml`
+5. `cratestack/crates/cratestack-studio-generator/src/lib.rs`
+6. `cratestack/crates/cratestack-studio-generator/templates/**`
+7. `cratestack/crates/cratestack-studio-generator/tests/generator.rs`
 
 ## `main.rs` Patch Plan
 
@@ -68,7 +68,7 @@ Extend `enum Command` with `GenerateStudio { ... }`.
 Extract shared schema parsing into a helper:
 
 ```rust
-fn parse_schema_or_render(schema: &Path) -> Result<coolstack_core::Schema>
+fn parse_schema_or_render(schema: &Path) -> Result<cratestack_core::Schema>
 ```
 
 Use it for:
@@ -111,7 +111,7 @@ Flow:
 
 1. parse schema
 2. validate args
-3. call `coolstack_studio_generator::generate_package(...)`
+3. call `cratestack_studio_generator::generate_package(...)`
 4. preflight output directory safety
 5. write generated files
 6. print success message
@@ -164,9 +164,9 @@ CLI should delegate to a generator crate, just like `GenerateDart` does today.
 Suggested public generator API:
 
 ```rust
-let package = coolstack_studio_generator::generate_package(
+let package = cratestack_studio_generator::generate_package(
     &parsed,
-    &coolstack_studio_generator::StudioGeneratorConfig {
+    &cratestack_studio_generator::StudioGeneratorConfig {
         name,
         service_name,
         schema_path: schema.clone(),
@@ -184,7 +184,7 @@ let package = coolstack_studio_generator::generate_package(
 println!("generated Studio app: {}", out.display());
 ```
 
-## Proposed Unit Tests In `coolstack-cli`
+## Proposed Unit Tests In `cratestack-cli`
 
 1. `generate_studio_clap_defaults`
 2. `validate_mount_path_rejects_missing_leading_slash`
@@ -195,7 +195,7 @@ println!("generated Studio app: {}", out.display());
 
 ## Proposed Generator Tests
 
-In `coolstack-studio-generator/tests/generator.rs`:
+In `cratestack-studio-generator/tests/generator.rs`:
 
 1. `generate_package_emits_expected_root_files`
 2. `generate_package_injects_name_service_url_mount_path_profile`

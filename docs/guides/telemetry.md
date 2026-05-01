@@ -34,13 +34,13 @@ pub fn init_telemetry() {
     let _ = fmt()
         .with_env_filter(
             EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new("coolstack=info")),
+                .unwrap_or_else(|_| EnvFilter::new("cratestack=info")),
         )
         .try_init();
 }
 ```
 
-Use `coolstack=debug` if you want to see procedure authorization events in addition to the default route and invocation
+Use `cratestack=debug` if you want to see procedure authorization events in addition to the default route and invocation
 completion events.
 
 ## Generated Procedure Telemetry
@@ -96,7 +96,7 @@ Current generated fields include:
 | `cratestack_count`         | Number of items returned by the completed list response                                 |
 | `cratestack_total_count`   | Total result count recorded for paged list responses                                    |
 
-All current generated events use the `coolstack` tracing target.
+All current generated events use the `cratestack` tracing target.
 
 ## Current Boundaries
 

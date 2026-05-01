@@ -17,8 +17,8 @@ That is not impossible, but it is a great way to turn a UI project into a crypto
 Provide one small Rust backend that:
 
 1. exposes generated metadata
-2. proxies CRUD requests to CoolStack services
-3. proxies procedure calls to CoolStack services
+2. proxies CRUD requests to CrateStack services
+3. proxies procedure calls to CrateStack services
 4. applies signing and transport policy on behalf of the UI
 5. serves the built Yew frontend assets
 6. optionally simulates auth contexts for local or internal tooling
@@ -36,7 +36,7 @@ Recommended development shape:
 
 1. run the backend locally
 2. let it serve the frontend
-3. point it at the target CoolStack service URL
+3. point it at the target CrateStack service URL
 
 ## Proposed Endpoints
 
@@ -101,7 +101,7 @@ GET /studio/api/models/PaymentInstrument?sort=-updatedAt&status=active
 
 Backend behavior:
 
-1. translate incoming Studio query parameters into canonical CoolStack query params
+1. translate incoming Studio query parameters into canonical CrateStack query params
 2. sign if needed
 3. forward using the configured transport codec
 4. return a normalized JSON response to the UI
@@ -163,7 +163,7 @@ The generated backend should be boring, auditable, and slightly suspicious of ev
 This design naturally suggests a new command such as:
 
 ```bash
-coolstack generate-studio \
+cratestack generate-studio \
   --schema "../vaam-backends/services/payment-gateway/schema/payment.cool" \
   --out "../tools/studios/payment-gateway-studio" \
   --name payment-gateway-studio \

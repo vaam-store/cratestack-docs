@@ -1,6 +1,6 @@
 ## Studio MVP
 
-This is the first useful version of `coolstack-studio`.
+This is the first useful version of `cratestack-studio`.
 
 The right bar is not "clone Prisma Studio".
 
@@ -98,7 +98,7 @@ Show:
 2. service mode
 3. custom dev context mode
 
-This is the feature that makes the Studio feel like CoolStack rather than a generic CRUD panel.
+This is the feature that makes the Studio feel like CrateStack rather than a generic CRUD panel.
 
 ## Best First Schema Demos
 
@@ -139,7 +139,7 @@ The MVP is successful if a developer can:
 ## First Generated Command To Optimize For
 
 ```bash
-coolstack generate-studio \
+cratestack generate-studio \
   --schema "../vaam-backends/services/auth-service/schema/auth.cool" \
   --out "../tools/studios/auth-service-studio" \
   --name auth-service-studio \

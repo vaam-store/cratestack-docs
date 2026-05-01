@@ -161,9 +161,9 @@ Prefer generated metadata from the same `include_schema!` path that already crea
 
 The next generated piece should be a Studio metadata export, for example:
 
-1. `coolstack_schema::studio::metadata()`
-2. `coolstack_schema::studio::service_name()`
-3. `coolstack_schema::studio::mount_defaults()`
+1. `cratestack_schema::studio::metadata()`
+2. `cratestack_schema::studio::service_name()`
+3. `cratestack_schema::studio::mount_defaults()`
 
 That keeps schema truth in one place.
 

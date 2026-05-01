@@ -1,6 +1,6 @@
 ## Generated App Shape
 
-This is the new center of gravity for `coolstack-studio`.
+This is the new center of gravity for `cratestack-studio`.
 
 The generator should not produce only a frontend app.
 
@@ -22,7 +22,7 @@ That is good here because the goal is not "generic admin framework compatibility
 The goal is:
 
 1. generated from `.cool`
-2. CoolStack-native
+2. CrateStack-native
 3. procedure-aware
 4. policy-aware
 5. deployable as a standalone service

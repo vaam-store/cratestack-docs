@@ -4,33 +4,33 @@ This document pins down the first Rust struct set for `generate-studio`.
 
 Recommendation:
 
-1. keep `coolstack-cli` thin
+1. keep `cratestack-cli` thin
 2. put Studio generation in a dedicated crate
-3. model it after the existing `coolstack-client-dart` generator shape
+3. model it after the existing `cratestack-client-dart` generator shape
 
 ## Recommended Crate Split
 
 Preferred:
 
-1. `coolstack/crates/coolstack-studio-generator`
+1. `cratestack/crates/cratestack-studio-generator`
 
 Strongly recommended companion crate:
 
-2. `coolstack/crates/coolstack-studio-core`
+2. `cratestack/crates/cratestack-studio-core`
 
 Why:
 
 1. generator crate owns templates, context-building, and emitted files
 2. core crate owns reusable metadata DTOs that the generated backend and frontend can share
 
-If V1 needs to stay smaller, start with `coolstack-studio-generator` first and move the reusable metadata types later.
+If V1 needs to stay smaller, start with `cratestack-studio-generator` first and move the reusable metadata types later.
 
 ## Public Generator API
 
 ```rust
 use std::path::PathBuf;
 
-use coolstack_core::Schema;
+use cratestack_core::Schema;
 
 pub fn generate_package(
     schema: &Schema,
@@ -337,7 +337,7 @@ enum StudioProxyRouteKind {
 
 ## Runtime Metadata Types
 
-These belong in `coolstack-studio-core` if that crate is created.
+These belong in `cratestack-studio-core` if that crate is created.
 
 ```rust
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -457,12 +457,12 @@ pub struct StudioConfig {
 ## Open Decisions
 
 1. Whether `service_name` should be explicit in CLI input or derived from `name`
-2. Whether Studio metadata types live immediately in `coolstack-studio-core` or temporarily in the generator crate
+2. Whether Studio metadata types live immediately in `cratestack-studio-core` or temporarily in the generator crate
 3. Whether V1 file output should carry target and kind metadata, or only relative path plus contents
 
 ## Recommendation
 
-Start with the smallest pattern that matches `coolstack-client-dart`:
+Start with the smallest pattern that matches `cratestack-client-dart`:
 
 1. one public config struct
 2. one public generated package struct

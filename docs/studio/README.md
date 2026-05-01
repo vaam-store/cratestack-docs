@@ -1,6 +1,6 @@
-## CoolStack Studio
+## CrateStack Studio
 
-Short version: this is the folder for the "Prisma Studio, but for CoolStack" idea, now reworked around generated full-stack Yew apps. ✨
+Short version: this is the folder for the "Prisma Studio, but for CrateStack" idea, now reworked around generated full-stack Yew apps. ✨
 
 Important note:
 
@@ -9,7 +9,7 @@ Important note:
 
 The current direction is:
 
-1. one generated Studio app from one or more `.cool` files
+1. one generated Studio app from one or more `.cstack` files
 2. Yew frontend
 3. Rust backend
 4. backend serves the built frontend and exposes context-scoped Studio APIs
@@ -33,7 +33,7 @@ It is a small deployable service.
 
 ## Core Principles
 
-1. generation starts from one `.cool` file
+1. generation starts from one `.cstack` file
 2. the result is production-deployable
 3. the browser should not own signing secrets
 4. Studio stays HTTP-first, not DB-direct
@@ -53,15 +53,15 @@ Read these in order if you want the latest truth first:
 If you are the next developer picking this up, start here:
 
 1. `current-state.md` for verified behavior and limits
-2. `coolstack/crates/coolstack-cli/src/main.rs` for CLI input shape
-3. `coolstack/crates/coolstack-studio-generator/src/lib.rs` for generator data flow
-4. `coolstack/crates/coolstack-studio-generator/templates/**` for generated backend/frontend behavior
+2. `cratestack/crates/cratestack-cli/src/main.rs` for CLI input shape
+3. `cratestack/crates/cratestack-studio-generator/src/lib.rs` for generator data flow
+4. `cratestack/crates/cratestack-studio-generator/templates/**` for generated backend/frontend behavior
 5. `tools/studios/vaam-backends-studio-multi/` for the latest canonical generated multi-context output
 
 Verified generator/backend checks already run for the current implementation:
 
-1. `cargo test -p coolstack-studio-generator`
-2. `cargo test -p coolstack-cli`
+1. `cargo test -p cratestack-studio-generator`
+2. `cargo test -p cratestack-cli`
 3. generate a fresh multi-context Studio workspace from all VAAM backend schemas
 4. `cargo check --workspace` inside the generated workspace
 5. `cargo run -p <generated-backend-crate>` inside the generated workspace
@@ -74,7 +74,7 @@ The next developer should still run the generated frontend build path explicitly
 
 ## Why This Direction Fits Better
 
-CoolStack is service-oriented and policy-aware.
+CrateStack is service-oriented and policy-aware.
 
 So a good Studio should understand:
 

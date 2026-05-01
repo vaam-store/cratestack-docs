@@ -11,7 +11,7 @@ The output target is one per-schema full-stack Studio app:
 
 ## Generator Pattern
 
-Match the existing `coolstack-client-dart` generator style:
+Match the existing `cratestack-client-dart` generator style:
 
 1. fixed `TEMPLATE_SPECS`
 2. built-in defaults
@@ -22,7 +22,7 @@ Match the existing `coolstack-client-dart` generator style:
 ## Proposed Template Directory Layout
 
 ```text
-coolstack/crates/coolstack-studio-generator/templates/
+cratestack/crates/cratestack-studio-generator/templates/
   root/
     Cargo.toml.j2
     README.md.j2
