@@ -10,7 +10,7 @@ If this file conflicts with another Studio doc, prefer this file.
 
 Current implementation is a generated full-stack Studio app with:
 
-1. one `.cool` schema as input
+1. one or more `.cool` schemas as input
 2. one generated Rust workspace as output
 3. Rust backend
 4. Yew frontend
@@ -20,21 +20,24 @@ Current generator entrypoint:
 
 ```bash
 coolstack generate-studio \
+  --schema ../vaam-backends/services/auth-service/schema/auth.cool \
+  --service-url http://127.0.0.1:8081 \
   --schema ../vaam-backends/services/vendor-service/schema/vendor.cool \
-  --out ../tools/studios/vendor-service-studio \
-  --name vendor-service-studio \
-  --service-url http://127.0.0.1:8082
+  --service-url http://127.0.0.1:8082 \
+  --out ../tools/studios/vaam-backends-studio \
+  --name vaam-backends-studio
 ```
 
 Current CLI arguments are:
 
-1. `--schema`
+1. repeated `--schema`
 2. `--out`
 3. `--name`
-4. `--service-url`
-5. `--mount-path` default `/studio`
-6. `--profile` as `dev|prod`
-7. `--template-dir`
+4. repeated `--service-url`
+5. optional repeated `--context`
+6. `--mount-path` default `/studio`
+7. `--profile` as `dev|prod`
+8. `--template-dir`
 
 ## Architecture
 
@@ -45,11 +48,11 @@ That means:
 1. the browser talks to the generated Rust backend
 2. the generated backend serves the frontend assets
 3. the generated backend proxies model and procedure requests upstream
-4. upstream mapping is currently one schema to one `service_url`
+4. upstream mapping is currently one schema context to one `service_url`
 
 Direct database access is not implemented.
 
-Multi-schema or multi-`.cool` support is not implemented.
+Multi-schema or multi-`.cool` support is implemented through repeated CLI pairs.
 
 There is currently no generated manifest that maps:
 
@@ -63,13 +66,14 @@ Current generated backend routes are:
 
 ```http
 GET  /healthz
+GET  /healthz/ready
 GET  /studio
 GET  /studio/
 GET  /studio/assets/*
 GET  /studio/api/metadata
-GET  /studio/api/models/:model
-GET  /studio/api/models/:model/:id
-POST /studio/api/procedures/:procedure
+GET  /studio/api/contexts/:context/models/:model
+GET  /studio/api/contexts/:context/models/:model/:id
+POST /studio/api/contexts/:context/procedures/:procedure
 GET  /studio/{*path} -> SPA fallback
 ```
 
@@ -85,7 +89,6 @@ Current backend does **not** implement:
 1. create/update/delete model mutation proxy routes
 2. auth-context simulation
 3. signing or transport-policy enforcement beyond passthrough
-4. multi-service routing
 
 ## Generated Metadata
 
@@ -93,12 +96,21 @@ Current metadata is generated into `shared/src/metadata.json` and loaded into `S
 
 Current shape is:
 
-1. `service`
-2. `schema_path`
-3. `mount_path`
-4. `models`
-5. `enums`
-6. `procedures`
+1. `name`
+2. `mount_path`
+3. `default_context`
+4. `contexts`
+
+Current per-context metadata includes:
+
+1. `key`
+2. `display_name`
+3. `service`
+4. `schema_path`
+5. `service_url`
+6. `models`
+7. `enums`
+8. `procedures`
 
 Current model metadata includes:
 
@@ -141,7 +153,7 @@ Current generated frontend includes:
 3. shell-level editor tab strip
 4. per-page subtabs
 5. metadata drawer
-6. command palette overlay
+6. real schema-context selector in the top bar
 7. model view
 8. procedure view
 9. API explorer view
@@ -158,22 +170,12 @@ Current explorer behavior:
 
 1. metadata-local text filtering
 2. collapsible sections for tables, procedures, and enums
-3. context-sensitive side content depending on rail mode
-
-Current command palette behavior:
-
-1. opens from the Search button
-2. opens from `Cmd+K` or `Ctrl+K`
-3. performs local browser-only search over metadata-derived items
-4. can navigate to overview, models, and procedures
-5. can create a new query tab
 
 Current query tab behavior:
 
-1. query tabs are routable under `/studio/queries/:id`
+1. query tabs are routable under `/studio/contexts/:context/queries/:id`
 2. tabs can be created and closed
-3. tab state is preserved while switching tabs
-4. workspace state is persisted in IndexedDB
+3. tab state is preserved while switching tabs during the current page session
 
 Current query tab modes are:
 
@@ -190,33 +192,23 @@ Current procedure page behavior:
 
 ## Current Persistence
 
-Current frontend persists workspace state into IndexedDB.
+Current generated templates do not yet persist workspace state.
 
-Persisted state includes:
-
-1. open query tabs
-2. per-query state
-3. next query id
-
-Current implementation detail:
-
-1. IndexedDB database name is `coolstack-studio`
-2. object store name is `workspace`
+The older live `vendor-service-studio` app still contains IndexedDB-backed query-tab persistence, which is one of the remaining generator/template parity gaps.
 
 ## Current Limitations
 
 Current verified limitations are:
 
 1. no multi-schema manifest support
-2. no real schema/database selector
-3. no DB-direct mode
-4. no model create/update/delete UI
-5. no record detail page wired to `GET /studio/api/models/:model/:id`
-6. no enum detail route/page
-7. command palette does not yet implement keyboard navigation or enter-to-select workflow beyond click navigation
-8. generator/template parity is incomplete relative to the latest live `vendor-service-studio`
+2. no DB-direct mode
+3. no model create/update/delete UI
+4. no record detail page wired to `GET /studio/api/contexts/:context/models/:model/:id`
+5. no enum detail route/page
+6. no command palette or keyboard-driven search overlay in the generated templates yet
+7. generator/template parity is incomplete relative to the latest live `vendor-service-studio`
 
-One known implementation gap in the live app is that closed query tabs may leave orphaned query-state entries in persisted storage.
+One known implementation gap in the older live app is that closed query tabs may leave orphaned query-state entries in persisted storage.
 
 ## Docs Status
 
@@ -236,6 +228,5 @@ Use them like this:
 The most important unfinished Studio work is:
 
 1. full generator parity with the latest live app UX
-2. multi-`.cool` manifest support end-to-end
-3. real schema context switching backed by that manifest
-4. better procedure-query ergonomics without raw JSON dependence for ad-hoc query tabs
+2. manifest-driven multi-context Studio generation
+3. better procedure-query ergonomics without raw JSON dependence for ad-hoc query tabs
