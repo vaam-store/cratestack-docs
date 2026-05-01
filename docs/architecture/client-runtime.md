@@ -597,7 +597,7 @@ let config = RuntimeConfigWire {
 
 ### Rust Client-Only Schema
 
-Backend-to-backend callers should prefer `include_client_macro!` when they consume another service's `.cstack` schema but do not own its database, routes, policies, procedure registry, custom-field resolvers, or event subscriptions.
+Backend-to-backend callers should prefer `include_client_macro!` when they consume another service's `.cstack` schema but do not own its database, routes, policies, procedure registry, custom-field resolvers, or event subscriptions. CBOR should be the default backend-to-backend codec; JSON is for debugging, tests, and compatibility paths unless a service explicitly documents otherwise.
 
 ```rust
 use cratestack::include_client_macro;
@@ -618,7 +618,7 @@ let result = payment
     .await?;
 ```
 
-The generated facade still uses the canonical HTTP contract underneath: model clients call generated REST CRUD routes, procedure clients call `/$procs/{procedureName}`, and projection helpers lower selected reads into `fields`, `include`, and `includeFields[path]` query params.
+The generated facade still uses the canonical HTTP contract underneath: model clients call generated REST CRUD routes, procedure clients call `/$procs/{procedureName}`, and projection helpers lower selected reads into `fields`, `include`, and `includeFields[path]` query params. OAuth2 protocol endpoints are intentionally outside `.cstack` and should remain handwritten protocol integrations rather than generated CrateStack clients.
 
 JSON transport fallback with no envelope:
 
