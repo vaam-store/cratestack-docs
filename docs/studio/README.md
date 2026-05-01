@@ -2,6 +2,11 @@
 
 Short version: this is the folder for the "Prisma Studio, but for CoolStack" idea, now reworked around generated full-stack Yew apps. ✨
 
+Important note:
+
+1. `current-state.md` is the verified source of truth for what exists right now
+2. several other docs in this folder still describe the target state and are ahead of the current implementation
+
 The current direction is:
 
 1. one generated Studio app per `.cool` file
@@ -15,14 +20,15 @@ It is a small deployable service.
 
 ## What Belongs Here
 
-1. [Generated App Shape](./generated-app.md)
-2. [Metadata Contract](./metadata-contract.md)
-3. [Backend API](./relay-api.md)
-4. [Studio MVP](./mvp.md)
-5. [Implementation Spec](./implementation-spec.md)
-6. [Generator Module Structs](./generator-module-structs.md)
-7. [CLI Patch Plan](./cli-patch-plan.md)
-8. [Template Set](./template-set.md)
+1. [Current State](./current-state.md)
+2. [Generated App Shape](./generated-app.md)
+3. [Metadata Contract](./metadata-contract.md)
+4. [Backend API](./relay-api.md)
+5. [Studio MVP](./mvp.md)
+6. [Implementation Spec](./implementation-spec.md)
+7. [Generator Module Structs](./generator-module-structs.md)
+8. [CLI Patch Plan](./cli-patch-plan.md)
+9. [Template Set](./template-set.md)
 
 ## Core Principles
 
@@ -31,6 +37,14 @@ It is a small deployable service.
 3. the browser should not own signing secrets
 4. Studio stays HTTP-first, not DB-direct
 5. procedures are first-class, not side quests
+
+## Doc Reading Order
+
+Read these in order if you want the latest truth first:
+
+1. `current-state.md`
+2. `README.md`
+3. target-state docs such as `implementation-spec.md`, `relay-api.md`, `metadata-contract.md`, and `mvp.md`
 
 ## Why This Direction Fits Better
 
