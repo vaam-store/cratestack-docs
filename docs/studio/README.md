@@ -19,6 +19,10 @@ It is a small deployable service.
 2. [Metadata Contract](./metadata-contract.md)
 3. [Backend API](./relay-api.md)
 4. [Studio MVP](./mvp.md)
+5. [Implementation Spec](./implementation-spec.md)
+6. [Generator Module Structs](./generator-module-structs.md)
+7. [CLI Patch Plan](./cli-patch-plan.md)
+8. [Template Set](./template-set.md)
 
 ## Core Principles
 
