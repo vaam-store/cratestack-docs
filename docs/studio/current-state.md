@@ -230,3 +230,45 @@ The most important unfinished Studio work is:
 1. full generator parity with the latest live app UX
 2. manifest-driven multi-context Studio generation
 3. better procedure-query ergonomics without raw JSON dependence for ad-hoc query tabs
+
+## Next Developer Handoff
+
+Canonical generated multi-context output for this repo currently lives at:
+
+1. `tools/studios/vaam-backends-studio-multi`
+
+If you need to change generation behavior, the primary source files are:
+
+1. `coolstack/crates/coolstack-cli/src/main.rs`
+2. `coolstack/crates/coolstack-studio-generator/src/lib.rs`
+3. `coolstack/crates/coolstack-studio-generator/templates/backend/**`
+4. `coolstack/crates/coolstack-studio-generator/templates/shared/**`
+5. `coolstack/crates/coolstack-studio-generator/templates/web/**`
+
+The latest implemented multi-context flow is:
+
+1. repeated `--schema`
+2. repeated `--service-url`
+3. optional repeated `--context`
+4. generated metadata with `default_context` plus `contexts[]`
+5. generated backend proxy routes under `/studio/api/contexts/:context/...`
+6. generated frontend routes under `/studio/contexts/:context/...`
+
+Verified commands already run against this implementation are:
+
+1. `cargo test -p coolstack-studio-generator`
+2. `cargo test -p coolstack-cli`
+3. fresh multi-context generation into a new output directory
+4. `cargo check --workspace` inside the generated workspace
+5. `cargo run -p <generated-backend-crate>` inside the generated workspace
+
+What still needs deliberate follow-up, in recommended order:
+
+1. Bring generator templates to parity with the richer live `tools/studios/vendor-service-studio` UX:
+   command palette, keyboard search flow, and query persistence are still not in the generated templates.
+2. Add manifest-driven generation so callers do not need to repeat `--schema` and `--service-url` pairs manually.
+3. Improve ad-hoc procedure query ergonomics so query tabs can use generated structured forms instead of raw JSON only.
+4. If touching web templates, explicitly run the generated frontend build path:
+   `cd tools/studios/vaam-backends-studio-multi/web && pnpm install && trunk build --release`.
+
+Do not treat older target-state docs in this folder as executable truth without checking them against this file first.

@@ -9,10 +9,10 @@ Important note:
 
 The current direction is:
 
-1. one generated Studio app per `.cool` file
+1. one generated Studio app from one or more `.cool` files
 2. Yew frontend
 3. Rust backend
-4. backend serves the built frontend and exposes schema-scoped Studio APIs
+4. backend serves the built frontend and exposes context-scoped Studio APIs
 
 That means the generator output is not just "some web UI files".
 
@@ -21,14 +21,15 @@ It is a small deployable service.
 ## What Belongs Here
 
 1. [Current State](./current-state.md)
-2. [Generated App Shape](./generated-app.md)
-3. [Metadata Contract](./metadata-contract.md)
-4. [Backend API](./relay-api.md)
-5. [Studio MVP](./mvp.md)
-6. [Implementation Spec](./implementation-spec.md)
-7. [Generator Module Structs](./generator-module-structs.md)
-8. [CLI Patch Plan](./cli-patch-plan.md)
-9. [Template Set](./template-set.md)
+2. [Developer Handoff](./HANDOFF.md)
+3. [Generated App Shape](./generated-app.md)
+4. [Metadata Contract](./metadata-contract.md)
+5. [Backend API](./relay-api.md)
+6. [Studio MVP](./mvp.md)
+7. [Implementation Spec](./implementation-spec.md)
+8. [Generator Module Structs](./generator-module-structs.md)
+9. [CLI Patch Plan](./cli-patch-plan.md)
+10. [Template Set](./template-set.md)
 
 ## Core Principles
 
@@ -43,8 +44,33 @@ It is a small deployable service.
 Read these in order if you want the latest truth first:
 
 1. `current-state.md`
-2. `README.md`
-3. target-state docs such as `implementation-spec.md`, `relay-api.md`, `metadata-contract.md`, and `mvp.md`
+2. `HANDOFF.md`
+3. `README.md`
+4. target-state docs such as `implementation-spec.md`, `relay-api.md`, `metadata-contract.md`, and `mvp.md`
+
+## Developer Handoff
+
+If you are the next developer picking this up, start here:
+
+1. `current-state.md` for verified behavior and limits
+2. `coolstack/crates/coolstack-cli/src/main.rs` for CLI input shape
+3. `coolstack/crates/coolstack-studio-generator/src/lib.rs` for generator data flow
+4. `coolstack/crates/coolstack-studio-generator/templates/**` for generated backend/frontend behavior
+5. `tools/studios/vaam-backends-studio-multi/` for the latest canonical generated multi-context output
+
+Verified generator/backend checks already run for the current implementation:
+
+1. `cargo test -p coolstack-studio-generator`
+2. `cargo test -p coolstack-cli`
+3. generate a fresh multi-context Studio workspace from all VAAM backend schemas
+4. `cargo check --workspace` inside the generated workspace
+5. `cargo run -p <generated-backend-crate>` inside the generated workspace
+
+The next developer should still run the generated frontend build path explicitly when changing web templates:
+
+1. `cd tools/studios/vaam-backends-studio-multi/web`
+2. `pnpm install`
+3. `trunk build --release`
 
 ## Why This Direction Fits Better
 
