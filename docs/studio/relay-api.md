@@ -1,8 +1,8 @@
-## Relay API
+## Generated Backend API
 
-This is the "make Studio practical" layer.
+This is the backend that each generated Studio app should ship with.
 
-Without a relay, a browser UI has to solve too many platform concerns directly:
+Without it, a browser UI has to solve too many platform concerns directly:
 
 1. signed requests
 2. codec choice
@@ -14,58 +14,69 @@ That is not impossible, but it is a great way to turn a UI project into a crypto
 
 ## Goal
 
-Provide one HTTP relay that:
+Provide one small Rust backend that:
 
 1. exposes generated metadata
 2. proxies CRUD requests to CoolStack services
 3. proxies procedure calls to CoolStack services
 4. applies signing and transport policy on behalf of the UI
-5. optionally simulates auth contexts for local or internal tooling
+5. serves the built Yew frontend assets
+6. optionally simulates auth contexts for local or internal tooling
 
-## Deployment Shapes
+## Production Shape
 
-Three viable shapes exist:
+Recommended deployment shape:
 
-1. dev-local relay for local Studio work
-2. service-local relay mode for backend developers
-3. `vaam-admin` server-side relay for internal tooling
+1. `trunk build --release` produces static assets
+2. the generated backend serves those assets
+3. the generated backend mounts Studio APIs under `/studio/api`
+4. the generated backend can sit behind a reverse proxy
 
-Recommended starting point:
+Recommended development shape:
 
-1. local relay in development
-2. admin-side relay for shared internal environments
+1. run the backend locally
+2. let it serve the frontend
+3. point it at the target CoolStack service URL
 
 ## Proposed Endpoints
+
+### Static UI
+
+```http
+GET /studio
+GET /studio/
+GET /studio/assets/*
+```
 
 ### Metadata
 
 ```http
-GET /studio/services
-GET /studio/services/:service/metadata
+GET /studio/api/metadata
 ```
 
 ### CRUD Proxy
 
 ```http
-GET    /studio/services/:service/models/:model
-GET    /studio/services/:service/models/:model/:id
-POST   /studio/services/:service/models/:model
-PATCH  /studio/services/:service/models/:model/:id
-DELETE /studio/services/:service/models/:model/:id
+GET    /studio/api/models/:model
+GET    /studio/api/models/:model/:id
+POST   /studio/api/models/:model
+PATCH  /studio/api/models/:model/:id
+DELETE /studio/api/models/:model/:id
 ```
 
 ### Procedure Proxy
 
 ```http
-POST /studio/services/:service/procedures/:procedure
+POST /studio/api/procedures/:procedure
 ```
 
 ### Optional Dev Helpers
 
 ```http
-POST /studio/context/preview
-POST /studio/context/run-as
-GET  /studio/routes
+POST /studio/api/context/preview
+POST /studio/api/context/run-as
+GET  /studio/api/routes
+GET  /healthz
 ```
 
 ## Example Metadata Response
@@ -73,6 +84,7 @@ GET  /studio/routes
 ```json
 {
   "service": "auth-service",
+  "mountPath": "/studio",
   "metadata": {
     "models": ["User", "DeviceKey", "Enrollment"],
     "enums": ["EnrollmentRecordStatus", "DeviceKeyStatus"],
@@ -84,10 +96,10 @@ GET  /studio/routes
 ## Example CRUD Request
 
 ```http
-GET /studio/services/payment-gateway/models/PaymentInstrument?sort=-updatedAt&status=active
+GET /studio/api/models/PaymentInstrument?sort=-updatedAt&status=active
 ```
 
-Relay behavior:
+Backend behavior:
 
 1. translate incoming Studio query parameters into canonical CoolStack query params
 2. sign if needed
@@ -136,7 +148,7 @@ Keep the UI response predictable:
 4. effective auth-context info
 5. raw error body on non-success
 
-Those turn the relay from "just a proxy" into "a developer tool".
+Those turn the backend from "just a proxy" into "a developer tool".
 
 ## Security Notes
 
@@ -144,4 +156,19 @@ Those turn the relay from "just a proxy" into "a developer tool".
 2. raw signing material should not live in browser code
 3. procedure execution should respect normal service auth unless an explicit trusted tooling mode is configured
 
-The relay should be boring, auditable, and slightly suspicious of everyone. Which, to be fair, is a healthy attitude for admin infrastructure. 🔐
+The generated backend should be boring, auditable, and slightly suspicious of everyone. Which, to be fair, is a healthy attitude for admin infrastructure. 🔐
+
+## CLI Implication
+
+This design naturally suggests a new command such as:
+
+```bash
+coolstack generate-studio \
+  --schema "../vaam-backends/services/payment-gateway/schema/payment.cool" \
+  --out "../tools/studios/payment-gateway-studio" \
+  --name payment-gateway-studio \
+  --service-url "http://127.0.0.1:8085" \
+  --mount-path "/studio"
+```
+
+That command should emit the Yew frontend, Rust backend, and deployable wrapper together.

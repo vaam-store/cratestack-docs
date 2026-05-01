@@ -8,18 +8,21 @@ The right bar is:
 
 1. useful for real local and internal workflows
 2. obviously better than raw curl or ad hoc admin scripts
-3. built on the same metadata and relay platform the React Admin adapter will use
+3. generated from one `.cool` file into a runnable full-stack app
 
 ## MVP Screens
 
-### 1. Service Picker
+### 1. Schema Header
 
 Show:
 
-1. available services
-2. service health
-3. base URL
-4. metadata availability
+1. service name
+2. schema path
+3. configured service URL
+4. mount path
+5. backend health
+
+Because the first unit is one schema-scoped Studio app, not a multi-service control room.
 
 ### 2. Schema Explorer
 
@@ -97,7 +100,7 @@ Show:
 
 This is the feature that makes the Studio feel like CoolStack rather than a generic CRUD panel.
 
-## Best First Service Demos
+## Best First Schema Demos
 
 1. `auth-service`
 2. `payment-gateway`
@@ -111,7 +114,9 @@ Why:
 
 ## Suggested Build Order
 
-1. service picker
+1. generated backend shell
+2. Yew asset serving
+3. schema header
 2. schema explorer
 3. model list view
 4. record detail view
@@ -130,6 +135,19 @@ The MVP is successful if a developer can:
 4. run a procedure
 5. understand what request was sent
 6. switch auth context in a safe dev flow
+
+## First Generated Command To Optimize For
+
+```bash
+coolstack generate-studio \
+  --schema "../vaam-backends/services/auth-service/schema/auth.cool" \
+  --out "../tools/studios/auth-service-studio" \
+  --name auth-service-studio \
+  --service-url "http://127.0.0.1:8081" \
+  --mount-path "/studio"
+```
+
+If that command produces a runnable Studio with working metadata, list view, and procedure runner, the MVP is alive.
 
 ## Nice Future Tricks
 

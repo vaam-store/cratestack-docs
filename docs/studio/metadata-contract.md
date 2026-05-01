@@ -1,14 +1,14 @@
 ## Metadata Contract
 
-This is the foundation layer for both `coolstack-studio` and `coolstack-react-admin`.
+This is the foundation layer for each generated Studio app.
 
-If this contract is weak, both UIs become stringly, fragile, and full of special cases.
+If this contract is weak, the generated Yew app becomes stringly, fragile, and full of special cases.
 
-If this contract is good, both UIs get boring in the best possible way. 🧱
+If this contract is good, every per-schema Studio app gets boring in the best possible way. 🧱
 
 ## Goal
 
-Expose one generated metadata document per service that describes:
+Expose one generated metadata document for the target schema service that describes:
 
 1. models
 2. fields
@@ -27,13 +27,15 @@ Today the repo already exposes useful fragments through generated Rust:
 3. `ModelDescriptor.allowed_fields`
 4. `ModelDescriptor.allowed_includes`
 
-That is a good start, but it is not yet enough for a Studio or React Admin generator.
+That is a good start, but it is not yet enough for a Studio app generator.
 
 ## Proposed Shape
 
 ```json
 {
   "service": "payment-gateway",
+  "schemaPath": "services/payment-gateway/schema/payment.cool",
+  "mountPath": "/studio",
   "models": [
     {
       "name": "PaymentInstrument",
@@ -156,6 +158,12 @@ Prefer generated metadata from the same `include_schema!` path that already crea
 1. model descriptors
 2. route metadata
 3. schema summaries
+
+The next generated piece should be a Studio metadata export, for example:
+
+1. `coolstack_schema::studio::metadata()`
+2. `coolstack_schema::studio::service_name()`
+3. `coolstack_schema::studio::mount_defaults()`
 
 That keeps schema truth in one place.
 
