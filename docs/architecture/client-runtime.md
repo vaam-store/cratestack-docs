@@ -102,7 +102,7 @@ Non-goals for this store:
 Current implementation note:
 
 1. runtime config currently exposes only `InMemory` and `JsonFile`
-2. the SQLite-backed store exists as `cratestack-client-store-sqlite`, but it is not yet selectable through the public Dart or Flutter runtime config surface
+2. the SQLite-backed store exists as `cratestack-client-store-sqlite`, and the Redis-backed store exists as `cratestack-client-store-redis`, but neither is yet selectable through the public Dart or Flutter runtime config surface
 3. idempotency, replay metadata, and cache metadata are still deferred beyond the current request journal and state version markers
 
 Secrets should remain behind a separate host-owned boundary instead of being merged into the general state store.
@@ -527,7 +527,7 @@ Implemented in this repo:
 2. CBOR-first request and response handling through `cratestack-codec-cbor`
 3. request journaling through a `ClientStateStore` trait
 4. an in-memory store plus a JSON-file store for bootstrap and tests
-5. a new `cratestack-client-store-sqlite` crate for durable request-journal and state-version persistence
+5. dedicated `cratestack-client-store-sqlite` and `cratestack-client-store-redis` crates for durable request-journal and state-version persistence
 6. an FFI-ready runtime bridge with flat request, response, header, config, and error wire types
 7. a new `cratestack-client-flutter` crate that wraps the runtime bridge with safe Rust APIs for Dart or Flutter consumers
 8. one successful procedure call against generated Axum-compatible CBOR routes
@@ -571,7 +571,7 @@ Deferred from the spike:
 
 ## Current implementation note
 
-The current `cratestack-client-dart` crate should be treated as an experimental runtime-oriented and bridge-facing slice. It no longer owns Dio directly, renders through repo-managed templates that callers can override, and still uses generic value graphs for typed model conversion while the Rust-owned bridge and codec story continues to mature. The generated Dart APIs now expose canonical projection query options plus selection builders and projection wrappers for projected reads. On the Rust side, `cratestack-client-rust` now exposes additive request-authorizer hooks and a generated schema-native client facade over the same runtime. `include_schema!` emits that facade alongside server/database code; `include_client_macro!` emits only client-facing Rust types, inputs, selection builders, procedure payloads, and the reqwest-backed facade for callers that only need to talk to another CrateStack HTTP service. Selection-aware response typing is still intentionally incomplete overall, so callers should treat these projections as a contract-aligned safety improvement rather than assuming every narrowed selection is perfectly type-level exact.
+The current `cratestack-client-dart` crate should be treated as an experimental runtime-oriented and bridge-facing slice. It no longer owns Dio directly, renders through repo-managed templates that callers can override, and still uses generic value graphs for typed model conversion while the Rust-owned bridge and codec story continues to mature. The generated Dart APIs now expose canonical projection query options plus selection builders and projection wrappers for projected reads. On the Rust side, `cratestack-client-rust` now exposes additive request-authorizer hooks and a generated schema-native client facade over the same runtime. `include_schema!` emits that facade alongside server/database code; `include_client_macro!` emits only client-facing Rust types, inputs, selection builders, procedure payloads, and the reqwest-backed facade for callers that only need to talk to another CrateStack HTTP service. Selection-aware response typing is still intentionally incomplete overall, so callers should treat these projections as a contract-aligned safety improvement rather than assuming every narrowed selection is perfectly type-level exact. Runtime state persistence is provided through the base in-memory and JSON-file stores, plus opt-in SQLite and Redis store crates.
 
 ## Examples
 
@@ -639,6 +639,26 @@ let config = RuntimeConfigWire {
     },
 };
 ```
+
+### Rust Redis State Store
+
+Server-side Rust clients can opt into Redis-backed request journaling without adding Redis to the base runtime crate:
+
+```rust
+use std::sync::Arc;
+use cratestack_client_rust::{CborCodec, ClientConfig, CratestackClient};
+use cratestack_client_store_redis::RedisStateStore;
+
+let base_url = url::Url::parse("http://payment-gateway:3000")?;
+let store = Arc::new(RedisStateStore::open(
+    "redis://127.0.0.1:6379/",
+    "cratestack:clients:payment-gateway",
+)?);
+let runtime = CratestackClient::new(ClientConfig::new(base_url), CborCodec)
+    .with_state_store(store);
+```
+
+The Redis store uses `{prefix}:meta` for `schema_version`, `state_version`, and `updated_at`, plus `{prefix}:request_journal` as an append-only Redis list of JSON-encoded `RequestJournalEntry` values. `append_request_journal` uses an atomic Redis pipeline to push the journal entry and increment `state_version`.
 
 ### Flutter Wrapper Config
 
