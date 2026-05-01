@@ -1365,10 +1365,12 @@ Status: ADOPT OPTIONAL
 Purpose:
 
 * end-to-end HTTP tests
+* Rust generated-client runtime for CrateStack service-to-service calls
 
 Used by:
 
 * integration tests
+* `cratestack-client-rust`, which backs generated Rust clients emitted by `include_schema!` and client-only generated clients emitted by `include_client_macro!`
 
 Recommended dependency:
 
@@ -1378,11 +1380,11 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 
 Rationale:
 
-Useful for black-box HTTP tests, though Axum services can also be tested through Tower service calls.
+Useful for black-box HTTP tests, though Axum services can also be tested through Tower service calls. It is also the HTTP transport for generated Rust clients, including backend-to-backend callers that include only another service's client surface.
 
 Decision:
 
-Use only if black-box HTTP integration tests are needed.
+Use in `cratestack-client-rust` and in black-box HTTP integration tests. Prefer the generated client facade over handwritten `reqwest` calls when the target service exposes a CrateStack `.cstack` schema.
 
 ---
 

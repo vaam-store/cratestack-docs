@@ -535,7 +535,7 @@ Implemented in this repo:
 10. a generated Dart runtime that now targets a byte-oriented bridge instead of owning Dio directly
 11. canonical typed Dart query helpers for `fields`, `include`, relation-specific `includeFields[path]`, `sort`, `limit`, `offset`, grouped `where=`, legacy `or=`, and resource-specific filters, plus per-model field/include constants for safer selection assembly
 12. generated Dart selection builders plus projection wrappers for `getView` / `listView`
-13. request-authorizer hooks in `cratestack-client-rust` built around canonical request strings so host integrations can attach signed-request headers without changing generated clients
+13. request-authorizer hooks in `cratestack-client-rust` built around canonical request strings plus encoded request body bytes so host integrations can attach signed-request headers without changing generated clients
 14. runtime-wide transport config for `cbor` and `json`, with a reserved future envelope seam
 15. documented target-state transport layering across codec, framing, and envelope, including a future `application/cbor-seq` path
 16. removal of `CrateStackWireCodec` from the generated Dart seam
@@ -571,7 +571,7 @@ Deferred from the spike:
 
 ## Current implementation note
 
-The current `cratestack-client-dart` crate should be treated as an experimental runtime-oriented and bridge-facing slice. It no longer owns Dio directly, renders through repo-managed templates that callers can override, and still uses generic value graphs for typed model conversion while the Rust-owned bridge and codec story continues to mature. The generated Dart APIs now expose canonical projection query options plus selection builders and projection wrappers for projected reads. On the Rust side, `cratestack-client-rust` now exposes additive request-authorizer hooks and a generated schema-native client facade over the same runtime. Selection-aware response typing is still intentionally incomplete overall, so callers should treat these projections as a contract-aligned safety improvement rather than assuming every narrowed selection is perfectly type-level exact.
+The current `cratestack-client-dart` crate should be treated as an experimental runtime-oriented and bridge-facing slice. It no longer owns Dio directly, renders through repo-managed templates that callers can override, and still uses generic value graphs for typed model conversion while the Rust-owned bridge and codec story continues to mature. The generated Dart APIs now expose canonical projection query options plus selection builders and projection wrappers for projected reads. On the Rust side, `cratestack-client-rust` now exposes additive request-authorizer hooks and a generated schema-native client facade over the same runtime. `include_schema!` emits that facade alongside server/database code; `include_client_macro!` emits only client-facing Rust types, inputs, selection builders, procedure payloads, and the reqwest-backed facade for callers that only need to talk to another CrateStack HTTP service. Selection-aware response typing is still intentionally incomplete overall, so callers should treat these projections as a contract-aligned safety improvement rather than assuming every narrowed selection is perfectly type-level exact.
 
 ## Examples
 
@@ -594,6 +594,31 @@ let config = RuntimeConfigWire {
     },
 };
 ```
+
+### Rust Client-Only Schema
+
+Backend-to-backend callers should prefer `include_client_macro!` when they consume another service's `.cstack` schema but do not own its database, routes, policies, procedure registry, custom-field resolvers, or event subscriptions.
+
+```rust
+use cratestack::include_client_macro;
+use cratestack::client_rust::{CborCodec, ClientConfig, CratestackClient};
+
+include_client_macro!("../payment-gateway/schema/payment.cstack");
+
+let base_url = url::Url::parse("http://payment-gateway:3000")?;
+let runtime = CratestackClient::new(ClientConfig::new(base_url), CborCodec);
+let payment = cratestack_schema::client::Client::new(runtime);
+
+let result = payment
+    .procedures()
+    .supported_payment_providers(
+        &cratestack_schema::procedures::supported_payment_providers::Args::default(),
+        &[("authorization", authorization.as_str())],
+    )
+    .await?;
+```
+
+The generated facade still uses the canonical HTTP contract underneath: model clients call generated REST CRUD routes, procedure clients call `/$procs/{procedureName}`, and projection helpers lower selected reads into `fields`, `include`, and `includeFields[path]` query params.
 
 JSON transport fallback with no envelope:
 

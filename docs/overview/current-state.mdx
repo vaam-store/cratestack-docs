@@ -11,11 +11,11 @@ CrateStack already provides a usable Rust-first backend slice, but it is not yet
 
 1. a Rust 2024 multi-crate workspace under `cratestack/`
 2. schema parsing and semantic validation for an initial `.cool` subset
-3. compile-time `include_schema!` expansion into a generated `cratestack_schema` module
+3. compile-time `include_schema!` expansion into a generated full server/client `cratestack_schema` module
 4. SQLx-backed model delegates for `create`, `find_many`, `find_unique`, `update`, and `delete`
 5. generated Axum model CRUD and procedure routes
 6. host-owned authentication through `AuthProvider` and internal binding through `bind_auth(...)` and `bind_context(...)`
-7. generated Rust client support and generated Dart package output
+7. generated Rust client support through both full-schema `include_schema!` and client-only `include_client_macro!`, plus generated Dart package output
 8. policy enforcement for the current supported model and procedure policy subset
 9. generated telemetry for procedure wrappers, procedure routes, and model list routes
 
