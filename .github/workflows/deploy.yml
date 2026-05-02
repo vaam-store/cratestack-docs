@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - fix/pages-custom-domain
   workflow_dispatch:
 
 permissions:
