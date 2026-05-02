@@ -36,6 +36,7 @@ jobs:
           rm -rf site
           mkdir site
           unzip -q export.zip -d site
+          node scripts/fix-pages-paths.mjs site "/${{ github.event.repository.name }}"
           touch site/.nojekyll
 
       - name: Upload Pages artifact
