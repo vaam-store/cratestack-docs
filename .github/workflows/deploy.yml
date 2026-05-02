@@ -36,6 +36,7 @@ jobs:
           rm -rf site
           mkdir site
           unzip -q export.zip -d site
+          cp CNAME site/CNAME
           touch site/.nojekyll
 
       - name: Configure GitHub Pages
