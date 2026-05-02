@@ -1,0 +1,63 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "CrateStack",
+  "colors": {
+    "primary": "#0f766e"
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Overview",
+        "pages": [
+          "index",
+          "overview/current-state",
+          "overview/release-track"
+        ]
+      },
+      {
+        "group": "Get Started",
+        "pages": [
+          "getting-started/quickstart",
+          "guides/auth-provider"
+        ]
+      },
+      {
+        "group": "Guides",
+        "pages": [
+          "guides/telemetry",
+          "adoption/vaam-catalog"
+        ]
+      },
+      {
+        "group": "Architecture",
+        "pages": [
+          "architecture/transport-architecture",
+          "architecture/http-transport-contract",
+          "architecture/client-runtime"
+        ]
+      },
+      {
+        "group": "Tooling",
+        "pages": [
+          "tooling/editor-tooling"
+        ]
+      },
+      {
+        "group": "Reference",
+        "pages": [
+          "reference/auth-support-matrix"
+        ]
+      },
+      {
+        "group": "Internals",
+        "pages": [
+          "internals/core-architecture-adr",
+          "internals/mcp-operator-adr",
+          "internals/product-requirements",
+          "internals/package-selection"
+        ]
+      }
+    ]
+  }
+}
