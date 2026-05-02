@@ -102,8 +102,10 @@ Non-goals for this store:
 Current implementation note:
 
 1. runtime config currently exposes only `InMemory` and `JsonFile`
-2. the SQLite-backed store exists as `cratestack-client-store-sqlite`, and the Redis-backed store exists as `cratestack-client-store-redis`, but neither is yet selectable through the public Dart or Flutter runtime config surface
-3. idempotency, replay metadata, and cache metadata are still deferred beyond the current request journal and state version markers
+2. the SQLite-backed store exists as `cratestack-client-store-sqlite`, and the Redis-backed store exists as `cratestack-client-store-redis`
+3. Rust backend services can attach the Redis store directly with `CratestackClient::with_state_store(...)` or `with_optional_state_store(...)`; Vaam uses one Redis prefix per caller/target pair for generated backend-to-backend clients
+4. neither SQLite nor Redis is yet selectable through the public Dart or Flutter runtime config surface
+5. idempotency, replay metadata, and cache metadata are still deferred beyond the current request journal and state version markers
 
 Secrets should remain behind a separate host-owned boundary instead of being merged into the general state store.
 
