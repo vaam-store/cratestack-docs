@@ -46,6 +46,7 @@
       {
         "group": "Reference",
         "pages": [
+          "reference/mixins",
           "reference/auth-support-matrix"
         ]
       },

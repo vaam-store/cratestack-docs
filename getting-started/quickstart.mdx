@@ -9,6 +9,29 @@ This page is the smallest generic setup path for trying CrateStack in a Rust ser
 
 ## 1. Include A Schema
 
+Example schema:
+
+```cstack
+auth Principal {
+  id String
+  role String?
+}
+
+mixin AuditFields {
+  createdAt DateTime @default(dbgenerated())
+  updatedAt DateTime @default(dbgenerated())
+}
+
+model Post {
+  @use(AuditFields)
+
+  id String @id
+  title String
+
+  @@allow("read", auth() != null)
+}
+```
+
 ```rust
 use cratestack::include_schema;
 
