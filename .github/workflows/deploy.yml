@@ -31,16 +31,11 @@ jobs:
         run: npm install -g mint
 
       - name: Export site
-        env:
-          BASE_PATH: /${{ github.event.repository.name }}
-          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
-          NEXT_PUBLIC_ASSET_PREFIX: /${{ github.event.repository.name }}
         run: |
           mint export --output export.zip
           rm -rf site
           mkdir site
           unzip -q export.zip -d site
-          node scripts/fix-pages-paths.mjs site "/${{ github.event.repository.name }}"
           touch site/.nojekyll
 
       - name: Upload Pages artifact
