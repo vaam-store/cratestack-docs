@@ -5,7 +5,7 @@ This guide documents the first end-to-end adoption path for CrateStack inside th
 Target outcome:
 
 * start from `vaam-backends` with the catalog domain
-* keep one shared `.cool` schema for the catalog client contract
+* keep one shared `.cstack` schema for the catalog client contract
 * generate a Dart package under `frontends/vaam-mobile/packages/gen-*`
 * import that generated Dart package into `frontends/vaam-mobile/pubspec.yaml`
 * keep mobile Rust focused on generic request execution, signing, and upload helpers in `frontends/vaam-mobile/rust/vaam_runtime`
@@ -17,7 +17,7 @@ Verified current state in this repo:
 * `vaam-backends/services/catalog-service` now uses a generated CrateStack router for products and procedures, with only health checks left manual.
 * The richer catalog relation slice is now live-verified for `ownerSummary`, `assets`, `thumbnailAsset`, `options`, `variants`, and nested `Variant.thumbnailAsset`.
 * The catalog contract is currently described in prose at `vaam-backends/docs/service-interface/catalog-service.md`.
-* `catalog.cool` now covers `Owner`, `Asset`, `ProductOption`, `Variant`, `Product`, and the publish/upload procedures at `vaam-backends/services/catalog-service/schema/catalog.cool`.
+* `catalog.cstack` now covers `Owner`, `Asset`, `ProductOption`, `Variant`, `Product`, and the publish/upload procedures at `vaam-backends/services/catalog-service/schema/catalog.cstack`.
 * The CrateStack CLI currently supports `generate-dart`, `check`, `check --format json`, and `print-ir`.
 * There is no standalone `generate-rust` CLI command yet.
 * Rust client generation exists today through `include_schema!` compile-time codegen.
@@ -40,7 +40,7 @@ Implication:
 
 ## Editor Setup
 
-For `.cool` authoring in VS Code, prefer the first-party extension under `cratestack/packages/cratestack-vscode` plus the standalone `cratestack-lsp` binary.
+For `.cstack` authoring in VS Code, prefer the first-party extension under `cratestack/packages/cratestack-vscode` plus the standalone `cratestack-lsp` binary.
 
 Minimal local setup:
 
@@ -57,7 +57,7 @@ See `../tooling/editor-tooling.md` for the full current-state editor feature lis
 
 Recommended shared source-of-truth path:
 
-* `vaam-backends/services/catalog-service/schema/catalog.cool`
+* `vaam-backends/services/catalog-service/schema/catalog.cstack`
 
 Recommended consumer paths:
 
@@ -70,7 +70,7 @@ This keeps:
 * the mobile Dart consumer inside the Flutter package tree that `pubspec.yaml` already uses
 * the mobile Rust workspace focused on transport/runtime concerns instead of schema-typed catalog APIs
 
-## Step 1: Author The First `catalog.cool` Schema
+## Step 1: Author The First `catalog.cstack` Schema
 
 Start narrow.
 
@@ -88,7 +88,7 @@ Use `vaam-backends/docs/service-interface/catalog-service.md` as the contract so
 
 Recommended first file:
 
-* `vaam-backends/services/catalog-service/schema/catalog.cool`
+* `vaam-backends/services/catalog-service/schema/catalog.cstack`
 
 Suggested first-slice shape:
 
@@ -171,7 +171,7 @@ From `cratestack/`:
 
 ```bash
 cargo run -p cratestack-cli -- check \
-  --schema "../vaam-backends/services/catalog-service/schema/catalog.cool"
+  --schema "../vaam-backends/services/catalog-service/schema/catalog.cstack"
 ```
 
 If this passes, CrateStack can consume the schema for both generated client paths.
@@ -180,7 +180,7 @@ If you need machine-readable diagnostics for editor fallback or CI glue, use:
 
 ```bash
 cargo run -p cratestack-cli -- check \
-  --schema "../vaam-backends/services/catalog-service/schema/catalog.cool" \
+  --schema "../vaam-backends/services/catalog-service/schema/catalog.cstack" \
   --format json
 ```
 
@@ -293,7 +293,7 @@ From `cratestack/`:
 
 ```bash
 cargo run -p cratestack-cli -- generate-dart \
-  --schema "../vaam-backends/services/catalog-service/schema/catalog.cool" \
+  --schema "../vaam-backends/services/catalog-service/schema/catalog.cstack" \
   --out "../frontends/vaam-mobile/packages/gen_catalog_client" \
   --library-name gen_catalog_client \
   --base-path "/api"
@@ -303,9 +303,9 @@ This creates a Flutter-shaped package under:
 
 * `frontends/vaam-mobile/packages/gen_catalog_client`
 
-Re-run that same command any time the source `.cool` schema changes or the Dart generator/templates change. Generated packages are materialized output, so enum additions or other type-shape changes do not appear in `gen_catalog_client` until you regenerate it.
+Re-run that same command any time the source `.cstack` schema changes or the Dart generator/templates change. Generated packages are materialized output, so enum additions or other type-shape changes do not appear in `gen_catalog_client` until you regenerate it.
 
-If the schema changed but the generated package did not, that is not spooky action at a distance. It just means the generator has not been run again yet. 👻
+If the schema changed but the generated package did not, re-run the generator before debugging the mobile package.
 
 For example, after adding:
 
@@ -482,7 +482,7 @@ This uses the current generated Dart surface accurately:
 
 For the first real repo adoption, keep the scope narrow:
 
-1. one backend-owned schema file at `vaam-backends/services/catalog-service/schema/catalog.cool`
+1. one backend-owned schema file at `vaam-backends/services/catalog-service/schema/catalog.cstack`
 2. one Dart package at `frontends/vaam-mobile/packages/gen_catalog_client`
 3. one Rust runtime crate at `frontends/vaam-mobile/rust/vaam_runtime`
 4. one projected product fetch in Flutter
@@ -515,7 +515,7 @@ This guide is accurate to the current repo, but these gaps still matter:
 
 After this guide is used once for real, the highest-value follow-up is:
 
-1. extend `schema/catalog.cool` to the next real catalog slice
+1. extend `schema/catalog.cstack` to the next real catalog slice
 2. regenerate `frontends/vaam-mobile/packages/gen_catalog_client`
 3. keep the mobile adapter/interceptor wiring aligned with the regenerated package
 4. record the friction points

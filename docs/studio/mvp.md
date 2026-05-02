@@ -8,7 +8,7 @@ The right bar is:
 
 1. useful for real local and internal workflows
 2. obviously better than raw curl or ad hoc admin scripts
-3. generated from one `.cool` file into a runnable full-stack app
+3. generated from one `.cstack` file into a runnable full-stack app
 
 ## MVP Screens
 
@@ -140,7 +140,7 @@ The MVP is successful if a developer can:
 
 ```bash
 cratestack generate-studio \
-  --schema "../vaam-backends/services/auth-service/schema/auth.cool" \
+  --schema "../vaam-backends/services/auth-service/schema/auth.cstack" \
   --out "../tools/studios/auth-service-studio" \
   --name auth-service-studio \
   --service-url "http://127.0.0.1:8081" \

@@ -15,10 +15,10 @@ CrateStack is intended to be a Rust-native, schema-first backend framework layer
 The primary developer experience should be:
 
 ```rust
-cratestack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cstack");
 ```
 
-Developers should define their data model, authorization rules, field exposure rules, custom fields, and procedures in `.cool` schema files. CrateStack should generate a typed ORM client, canonical REST CRUD routes, procedure interfaces, request/response types, generated client libraries, and policy enforcement code.
+Developers should define their data model, authorization rules, field exposure rules, custom fields, and procedures in `.cstack` schema files. CrateStack should generate a typed ORM client, canonical REST CRUD routes, procedure interfaces, request/response types, generated client libraries, and policy enforcement code.
 
 The project has several important constraints:
 
@@ -48,10 +48,10 @@ The project has several important constraints:
 CrateStack v0 will use a macro-first, schema-first architecture centered around:
 
 ```rust
-cratestack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cstack");
 ```
 
-The macro will parse and validate the `.cool` schema at compile time and generate a Rust module named `cratestack_schema` containing:
+The macro will parse and validate the `.cstack` schema at compile time and generate a Rust module named `cratestack_schema` containing:
 
 * model structs
 * input structs
@@ -90,7 +90,7 @@ Generated success responses should default to raw typed bodies. When metadata is
 The primary integration point is:
 
 ```rust
-cratestack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cstack");
 ```
 
 The procedural macro will:
@@ -125,7 +125,7 @@ cratestack_schema::post
 Example application setup:
 
 ```rust
-cratestack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cstack");
 
 pub struct AppProcedures;
 
@@ -476,7 +476,7 @@ cratestack/
     cratestack-macros/
       // include_schema! proc macro
     cratestack-parser/
-      // .cool parser
+      // .cstack parser
     cratestack-core/
       // AST, IR, validation, value model
     cratestack-policy/
@@ -547,10 +547,10 @@ Example:
 cratestack-generated = { path = "./cratestack-generated" }
 ```
 
-Rejected for v0 because the preferred developer experience is to define `.cool` files and include them directly with:
+Rejected for v0 because the preferred developer experience is to define `.cstack` files and include them directly with:
 
 ```rust
-cratestack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cstack");
 ```
 
 This avoids an explicit generation step and keeps schema inclusion closer to normal Rust module inclusion.
@@ -559,7 +559,7 @@ This alternative may still be useful later as a debugging or build optimization 
 
 ## Alternative 2: Build a Runtime Schema Interpreter
 
-CrateStack could parse `.cool` at runtime and dynamically serve APIs.
+CrateStack could parse `.cstack` at runtime and dynamically serve APIs.
 
 Rejected because:
 
@@ -655,7 +655,7 @@ The decision optimizes for:
 
 Potential future ADRs:
 
-1. ADR 0002: `.cool` Schema Grammar and Type System.
+1. ADR 0002: `.cstack` Schema Grammar and Type System.
 2. ADR 0003: Permission Expression Semantics and SQL Compilation.
 3. ADR 0004: Procedure Routing and Naming.
 4. ADR 0005: CBOR Codec Implementation.
@@ -667,4 +667,4 @@ Potential future ADRs:
 
 ## Final Decision Statement
 
-CrateStack v0 will be a macro-first, schema-first Rust framework layer that generates a SQLx-backed ORM, policy-protected REST CRUD routes, and REST procedure endpoints from `.cool` files. It will delegate authentication to the host application, enforce default-deny permissions, avoid system-level policy bypasses, and abstract HTTP body handling through codec and envelope traits so CBOR and COSE can be first-class without sacrificing general developer experience.
+CrateStack v0 will be a macro-first, schema-first Rust framework layer that generates a SQLx-backed ORM, policy-protected REST CRUD routes, and REST procedure endpoints from `.cstack` files. It will delegate authentication to the host application, enforce default-deny permissions, avoid system-level policy bypasses, and abstract HTTP body handling through codec and envelope traits so CBOR and COSE can be first-class without sacrificing general developer experience.

@@ -17,9 +17,10 @@ Use this track as:
 
 ## Naming Note
 
-These docs already use the public `cratestack` naming.
+These docs use the public `cratestack` naming. The framework code and docs are split into separate public repositories:
 
-The current implementation workspace in this repo still lives under the historical `cratestack/` name, so some code and file paths in the checked-in repository have not caught up to the public docs branding yet.
+1. `git@github.com:vaam-store/cratestack.git` for the Rust workspace and editor package
+2. `git@github.com:vaam-store/cratestack-docs.git` for this Mintlify documentation project
 
 ## Stability Guide
 
@@ -31,8 +32,8 @@ Read sections this way:
 
 ## Next Versioning Step
 
-When extraction and publishing are complete, the next natural docs move is:
+After the initial public release, the next natural docs move is:
 
 1. keep `v0` as the stable baseline
 2. introduce a preview or next track for unreleased changes
-3. align the public examples with the renamed extracted codebase end-to-end
+3. keep examples aligned with the published codebase end-to-end

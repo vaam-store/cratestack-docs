@@ -7,25 +7,25 @@ This document records the current state of CrateStack editor support, how to use
 CrateStack has two editor surfaces:
 
 * Rust files that consume `cratestack::include_schema!(...)`
-* `.cool` schema files authored directly
+* `.cstack` schema files authored directly
 
 Those surfaces have different constraints.
 
 Rust support depends on a real Cargo workspace because `include_schema!` is a proc macro that expands relative to a real schema path.
 
-`.cool` support is intentionally split out into a standalone language server so basic schema authoring does not require a full host project checkout.
+`.cstack` support is intentionally split out into a standalone language server so basic schema authoring does not require a full host project checkout.
 
 ## Current State
 
 Implemented in this repo today:
 
-* `crates/cratestack-lsp` provides a standalone language server for `.cool` files
+* `crates/cratestack-lsp` provides a standalone language server for `.cstack` files
 * `packages/cratestack-vscode` provides the VS Code extension wrapper that launches `cratestack-lsp`
 * `cratestack-cli check --format json` provides machine-readable diagnostics for CI or editor fallback integrations
 * parser and semantic structures now preserve schema docs and source spans needed for editor features and generated Rust docs
 * `include_schema!` now emits Rust `#[doc = "..."]` attributes from schema-authored comments
 
-Implemented `.cool` editor features:
+Implemented `.cstack` editor features:
 
 * diagnostics
 * hover
@@ -73,9 +73,9 @@ Why this is required:
 * generated Rust APIs come from proc-macro expansion
 * the generated `cratestack_schema` module only exists when rust-analyzer can build the real consumer crate
 
-## `.cool` Setup In VS Code
+## `.cstack` Setup In VS Code
 
-The intended path for `.cool` files is the `cratestack-vscode` extension plus `cratestack-lsp`.
+The intended path for `.cstack` files is the `cratestack-vscode` extension plus `cratestack-lsp`.
 
 Local development flow:
 
@@ -100,7 +100,7 @@ The extension resolves the server in this order:
 For machine-readable schema validation outside the editor:
 
 ```bash
-cargo run -p cratestack-cli -- check --schema path/to/schema.cool --format json
+cargo run -p cratestack-cli -- check --schema path/to/schema.cstack --format json
 ```
 
 This is useful for:
@@ -121,9 +121,9 @@ Supported today:
 
 This keeps one documentation source for:
 
-* `.cool` authors reading schemas
+* `.cstack` authors reading schemas
 * Rust users reading generated API docs and hovers
-* future richer hover content in the `.cool` language server
+* future richer hover content in the `.cstack` language server
 
 ## Packaging And Release Flow
 
@@ -171,6 +171,6 @@ Likely medium-term work:
 
 Deferred or optional follow-ups:
 
-1. Formatting support for `.cool` once the schema grammar and style expectations stabilize.
+1. Formatting support for `.cstack` once the schema grammar and style expectations stabilize.
 2. Auto-download or release-channel discovery for `cratestack-lsp` binaries instead of requiring either a bundled server or manual path setup.
 3. More workspace-aware Rust and schema cross-navigation if future architecture needs symbol links between generated Rust surfaces and original schema declarations.

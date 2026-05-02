@@ -34,7 +34,7 @@ That is a good start, but it is not yet enough for a Studio app generator.
 ```json
 {
   "service": "payment-gateway",
-  "schemaPath": "services/payment-gateway/schema/payment.cool",
+  "schemaPath": "services/payment-gateway/schema/payment.cstack",
   "mountPath": "/studio",
   "models": [
     {

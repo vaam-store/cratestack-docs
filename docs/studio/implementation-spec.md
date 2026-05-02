@@ -15,7 +15,7 @@ This is intentionally a V1 spec, not the final word forever.
 
 ### Goal
 
-Generate one runnable Studio app from one `.cool` schema.
+Generate one runnable Studio app from one `.cstack` schema.
 
 The output should be a full-stack app:
 
@@ -28,7 +28,7 @@ The output should be a full-stack app:
 
 ```bash
 cratestack generate-studio \
-  --schema "../vaam-backends/services/payment-gateway/schema/payment.cool" \
+  --schema "../vaam-backends/services/payment-gateway/schema/payment.cstack" \
   --out "../tools/studios/payment-gateway-studio" \
   --name payment-gateway-studio \
   --service-url "http://127.0.0.1:8085" \

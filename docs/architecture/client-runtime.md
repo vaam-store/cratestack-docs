@@ -695,7 +695,7 @@ From `cratestack/`, generation looks like:
 
 ```bash
 cargo run -p cratestack-cli -- generate-dart \
-  --schema "crates/cratestack/tests/fixtures/blog.cool" \
+  --schema "crates/cratestack/tests/fixtures/blog.cstack" \
   --out "../frontends/vaam-mobile/packages/blog_client" \
   --library-name blog_client \
   --base-path "/api"
@@ -768,13 +768,13 @@ In that flow:
 5. Rust returns bridge JSON bytes
 6. Dart reconstructs typed models through `fromWire()`
 
-That same regeneration flow is also the answer when generated packages lag behind schema changes: re-run `cratestack-cli generate-dart` for the target package after changing the `.cool` schema or the generator/templates.
+That same regeneration flow is also the answer when generated packages lag behind schema changes: re-run `cratestack-cli generate-dart` for the target package after changing the `.cstack` schema or the generator/templates.
 
 Example:
 
 ```bash
 cargo run -p cratestack-cli -- generate-dart \
-  --schema "../vaam-backends/services/auth-service/schema/auth.cool" \
+  --schema "../vaam-backends/services/auth-service/schema/auth.cstack" \
   --out "../frontends/vaam-mobile/packages/gen_auth_client" \
   --library-name gen_auth_client \
   --base-path "/api"

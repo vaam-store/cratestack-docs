@@ -4,10 +4,10 @@
 
 CrateStack is a Rust-native, schema-first backend framework layer for building typed database-backed HTTP REST APIs, generated clients, declarative authorization policies, and custom business procedures.
 
-Developers define their data model, authorization rules, field exposure directives, custom fields, and procedures in `.cool` schema files, then include them in Rust using:
+Developers define their data model, authorization rules, field exposure directives, custom fields, and procedures in `.cstack` schema files, then include them in Rust using:
 
 ```rust
-cratestack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cstack");
 ```
 
 The macro generates a typed ORM client, canonical REST CRUD routes, procedure interfaces, request/response types, generated client metadata, and policy enforcement code. CrateStack uses `sqlx` behind the scenes for database access and supports pluggable transport composition so applications can use JSON, CBOR, sequence-aware transports such as `application/cbor-seq`, and future COSE envelopes without sacrificing developer experience.
@@ -66,7 +66,7 @@ Platforms that do not want to normalize around JSON can keep generated HTTP APIs
 Applications can encode data visibility rules such as `published || authorId == auth().id` in schema policy declarations instead of duplicating checks across handlers and queries.
 
 4. Shared server and client contract generation
-Teams can use a `.cool` schema to drive generated routes, Rust delegate usage, and experimental generated client outputs from the same source of truth.
+Teams can use a `.cstack` schema to drive generated routes, Rust delegate usage, and experimental generated client outputs from the same source of truth.
 
 ---
 
@@ -74,7 +74,7 @@ Teams can use a `.cool` schema to drive generated routes, Rust delegate usage, a
 
 ### 3.1 Product Goals
 
-1. Let developers define data models and policies in `.cool` files.
+1. Let developers define data models and policies in `.cstack` files.
 2. Generate a typed Rust ORM client from the schema.
 3. Generate canonical HTTP REST CRUD routes for schema models.
 4. Support schema-configurable CRUD exposure per model and per operation.
@@ -97,7 +97,7 @@ The ideal developer flow:
 
 ```mermaid
 flowchart LR
-    Schema[Author .cool schema] --> Macro[include_schema!]
+    Schema[Author .cstack schema] --> Macro[include_schema!]
     Macro --> Delegates[Typed Rust delegates]
     Macro --> Routes[Generated Axum routes]
     Macro --> Policies[Generated policy checks]
@@ -106,7 +106,7 @@ flowchart LR
 ```
 
 ```rust
-cratestack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cstack");
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -131,7 +131,7 @@ async fn main() -> anyhow::Result<()> {
 }
 ```
 
-The developer defines a `.cool` file, implements generated procedure traits and custom-field resolver traits, provides authentication context through the framework, and gets REST endpoints plus a typed ORM and generated client contracts.
+The developer defines a `.cstack` file, implements generated procedure traits and custom-field resolver traits, provides authentication context through the framework, and gets REST endpoints plus a typed ORM and generated client contracts.
 
 Canonical transport design and HTTP negotiation rules are documented in:
 
@@ -191,9 +191,9 @@ Teams building:
 
 ## 6. Core Concepts
 
-### 6.1 `.cool` Schema
+### 6.1 `.cstack` Schema
 
-The `.cool` schema is the source of truth for:
+The `.cstack` schema is the source of truth for:
 
 * datasource configuration
 * auth context shape
@@ -465,7 +465,7 @@ mutation procedure publishPost(args: PublishPostInput): Post
 
 ## 8.1 Schema Parsing
 
-CrateStack must parse `.cool` files containing:
+CrateStack must parse `.cstack` files containing:
 
 * datasource blocks
 * auth blocks
@@ -579,7 +579,7 @@ Semantic errors should produce compiler-style diagnostics that identify the file
 The primary integration point is:
 
 ```rust
-cratestack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cstack");
 ```
 
 The macro must:
@@ -1341,7 +1341,7 @@ cratestack/
     cratestack-macros/
       // include_schema! proc macro
     cratestack-parser/
-      // .cool parser
+      // .cstack parser
     cratestack-core/
       // AST, IR, validation, value model
     cratestack-policy/
@@ -1355,7 +1355,7 @@ cratestack/
     cratestack-cli/
       // human-facing CLI plus machine-readable diagnostics
     cratestack-lsp/
-      // standalone language server for .cool files
+      // standalone language server for .cstack files
     cratestack-codec-json/
       // optional JSON codec
     cratestack-cose/
@@ -1475,7 +1475,7 @@ RETURNING columns
 ## 10.1 Application Setup
 
 ```rust
-cratestack::include_schema!("schema.cool");
+cratestack::include_schema!("schema.cstack");
 
 pub struct AppProcedures;
 
@@ -1595,15 +1595,15 @@ Even though the primary integration is `include_schema!`, a CLI is useful for va
 Required v0 CLI commands:
 
 ```bash
-cratestack check --schema schema.cool
-cratestack print-ir --schema schema.cool
+cratestack check --schema schema.cstack
+cratestack print-ir --schema schema.cstack
 ```
 
 Optional v0 commands:
 
 ```bash
-cratestack format --schema schema.cool
-cratestack sql --schema schema.cool
+cratestack format --schema schema.cstack
+cratestack sql --schema schema.cstack
 ```
 
 Deferred commands:
@@ -1684,7 +1684,7 @@ Use temporary PostgreSQL database or test containers.
 Test a full app flow:
 
 ```text
-schema.cool
+schema.cstack
   -> include_schema!
   -> axum router
   -> CBOR request
@@ -1844,8 +1844,8 @@ Deliverables:
 
 CrateStack v0 is successful when a developer can:
 
-1. Create a `.cool` schema with models, policies, types, and procedures.
-2. Include it with `cratestack::include_schema!("schema.cool")`.
+1. Create a `.cstack` schema with models, policies, types, and procedures.
+2. Include it with `cratestack::include_schema!("schema.cstack")`.
 3. Instantiate the generated `CrateStack` type with a SQLx PostgreSQL pool.
 4. Register procedure implementations.
 5. Use the generated ORM client in Rust.
@@ -1984,4 +1984,4 @@ After v0:
 
 ## 21. One-Sentence Product Definition
 
-CrateStack is a Rust-native schema-first framework layer that turns `.cool` files into a typed SQLx-backed ORM, policy-protected REST CRUD API, and custom REST procedure endpoints with pluggable CBOR/COSE-capable transport support.
+CrateStack is a Rust-native schema-first framework layer that turns `.cstack` files into a typed SQLx-backed ORM, policy-protected REST CRUD API, and custom REST procedure endpoints with pluggable CBOR/COSE-capable transport support.

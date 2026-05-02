@@ -95,7 +95,7 @@ Dependency boundary rules:
 13. `cratestack-client-dart` owns generated Dart or Flutter package generation.
 14. `cratestack-cli` owns CLI and terminal diagnostics dependencies.
 15. `cratestack-lsp` owns LSP/editor protocol behavior over parser and semantic surfaces.
-16. `cratestack-vscode` is a thin editor wrapper that contributes the `.cool` language and launches `cratestack-lsp`.
+16. `cratestack-vscode` is a thin editor wrapper that contributes the `.cstack` language and launches `cratestack-lsp`.
 
 ## 2.1 Current Direction Update
 
@@ -608,7 +608,7 @@ Status: ADOPT
 
 Purpose:
 
-* `.cool` schema parser
+* `.cstack` schema parser
 * parser combinators
 * source spans
 * recoverable parse errors
@@ -668,7 +668,7 @@ ariadne = "0.6"
 
 Rationale:
 
-`.cool` needs clear schema diagnostics. Ariadne produces readable source-highlighted error reports.
+`.cstack` needs clear schema diagnostics. Ariadne produces readable source-highlighted error reports.
 
 Decision:
 
@@ -1851,7 +1851,7 @@ For CrateStack v0, the team should proceed with these major decisions:
 1. Use SQLx for database execution.
 2. Use Axum for REST integration.
 3. Use Tokio as the async runtime.
-4. Use Chumsky for `.cool` parsing.
+4. Use Chumsky for `.cstack` parsing.
 5. Use Ariadne for schema diagnostics.
 6. Use Serde as the generated type serialization contract.
 7. Use `minicbor-serde` as the official Serde-based CBOR codec surface, with `minicbor` available for lower-level control.

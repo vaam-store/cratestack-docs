@@ -4,7 +4,7 @@ This is the new center of gravity for `cratestack-studio`.
 
 The generator should not produce only a frontend app.
 
-It should produce a small full-stack application per `.cool` file:
+It should produce a small full-stack application per `.cstack` file:
 
 1. a Yew frontend
 2. a Rust backend
@@ -21,7 +21,7 @@ That is good here because the goal is not "generic admin framework compatibility
 
 The goal is:
 
-1. generated from `.cool`
+1. generated from `.cstack`
 2. CrateStack-native
 3. procedure-aware
 4. policy-aware

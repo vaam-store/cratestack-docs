@@ -34,7 +34,7 @@ Therefore MCP must be treated as an optional agent-facing operator, not as Crate
 
 CrateStack will support an optional MCP operator surface.
 
-The MCP operator will be generated from the `.cool` schema and will expose selected resources and tools to MCP-compatible clients.
+The MCP operator will be generated from the `.cstack` schema and will expose selected resources and tools to MCP-compatible clients.
 
 The MCP operator is explicitly separate from the primary REST API.
 
@@ -436,7 +436,7 @@ Rejected because MCP has its own discovery and invocation semantics. It should b
 ## Follow-Up Work
 
 1. Select MCP Rust SDK or decide to implement protocol bindings directly.
-2. Define exact `.cool` MCP syntax.
+2. Define exact `.cstack` MCP syntax.
 3. Define generated MCP resource URI scheme.
 4. Define MCP tool naming rules.
 5. Define MCP context extraction strategy.
