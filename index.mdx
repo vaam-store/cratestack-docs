@@ -1,68 +1,98 @@
 ---
 title: CrateStack
-description: Schema-first Rust framework for typed SQLx-backed delegates, generated APIs, and generated clients.
+description: Build typed PostgreSQL services from one schema, with generated delegates, routes, policy checks, and clients.
 ---
 
 # CrateStack
 
-CrateStack is a Rust-native, schema-first framework for building typed PostgreSQL-backed services from `.cstack` files.
+CrateStack is a schema-first Rust framework for teams that want one source of truth for PostgreSQL-backed services instead of hand-wiring delegates, routes, auth checks, and client contracts.
+
+<Info>
+Define your service once in `.cstack`, then generate typed SQLx-backed delegates, Axum routes, policy-aware server behavior, and Rust or Dart client surfaces.
+</Info>
+
+<Columns cols={2}>
+  <Card title="Start with the quickstart" href="/getting-started/quickstart">
+    Stand up the smallest useful CrateStack service and see the generated runtime in a minimal Rust setup.
+  </Card>
+  <Card title="Check the verified scope" href="/overview/current-state">
+    See what the framework implements today, where it is already strong, and which parts are still intentionally deferred.
+  </Card>
+  <Card title="Understand the auth boundary" href="/guides/auth-provider">
+    Keep authentication host-owned while still using generated policy enforcement inside the service runtime.
+  </Card>
+  <Card title="Read the transport model" href="/architecture/transport-architecture">
+    Learn how CrateStack thinks about codecs, route generation, client boundaries, and future transport seams.
+  </Card>
+</Columns>
 
 ## Why CrateStack
 
-CrateStack is for teams that want one schema to drive:
+CrateStack is built for teams that want framework leverage without giving up Rust ownership. You define the data model and policy surface once, and the framework handles the repetitive service plumbing around it.
 
-1. typed SQLx-backed delegates
-2. generated API contracts
-3. policy-aware server behavior
-4. generated Rust and Dart client surfaces
+<Tabs>
+  <Tab title="What you author">
+    You write a `.cstack` schema that defines models, procedures, auth shape, mixins, and policy rules.
+  </Tab>
+  <Tab title="What gets generated">
+    CrateStack can generate SQLx-backed delegates, Axum CRUD and procedure routes, policy-aware runtime surfaces, and typed Rust or Dart clients.
+  </Tab>
+  <Tab title="Where it fits best">
+    The current slice is strongest for internal Rust services that want typed CRUD, generated contracts, and host-owned auth without building a custom framework from scratch.
+  </Tab>
+</Tabs>
 
-## What You Get
+## From Schema To Service
 
-The verified current slice is strongest at:
+<Steps>
+  <Step title="Define the contract">
+    Model your auth principal, shared mixins, models, and policies in a `.cstack` file.
+  </Step>
+  <Step title="Compile the runtime">
+    Use `include_schema!` to validate the schema at compile time and generate the `cratestack_schema` module.
+  </Step>
+  <Step title="Wire your database and host auth">
+    Build the generated runtime with a PostgreSQL pool and bind your application auth through the host-owned provider boundary.
+  </Step>
+  <Step title="Choose your surface area">
+    Use the generated delegates directly, mount generated Axum routers, or do both depending on how much API surface you want exposed.
+  </Step>
+</Steps>
 
-1. compile-time schema validation with `include_schema!`
+## What You Get Today
+
+1. compile-time schema validation
 2. generated SQLx-backed model delegates
 3. generated Axum CRUD and procedure routes
-4. host-owned auth with generated policy enforcement
+4. generated policy enforcement for the supported subset
 5. generated Rust and Dart client surfaces
+6. reusable schema mixins for shared field sets
 
-## Product Boundaries
+<Warning>
+CrateStack is usable today, but the public `v0` track is narrower than the broader target architecture. COSE transport, parts of the client runtime, richer schema coverage, and some policy features are still deferred. Use [Current State](/overview/current-state) as the source of truth for adoption decisions.
+</Warning>
 
-The implementation is still narrower than the broader target architecture.
+## Explore By Goal
 
-Current gaps that matter when adopting it:
-
-1. COSE transport is not implemented yet
-2. the client runtime is still a partial spike
-3. the parser still covers an initial schema subset
-4. some exposure and field-level policy controls are still deferred
-
-## Documentation Track
-
-The public docs currently publish one active track:
-
-1. `v0` for the current product shape and implementation-aligned docs
-
-See `overview/release-track` for the naming and stability rules behind that track.
-
-## Start Here
-
-1. `overview/current-state` for the verified current-state summary
-2. `getting-started/quickstart` for a minimal generic setup path
-3. `guides/auth-provider` for the host auth boundary
-4. `architecture/transport-architecture` for transport model decisions
-
-## Key Areas
-
-1. `guides/` for operational usage boundaries such as auth and telemetry
-2. `architecture/` for transport and runtime design
-3. `reference/` for supported auth and policy behavior
-4. `internals/` for ADRs, PRD material, and dependency decisions
+<Columns cols={2}>
+  <Card title="Evaluate adoption" href="/overview/current-state">
+    Start here if you need a realistic view of the current feature set, maturity, and implementation boundaries.
+  </Card>
+  <Card title="Ship a first service" href="/getting-started/quickstart">
+    Follow the minimal path from schema file to running Rust service with generated runtime pieces.
+  </Card>
+  <Card title="Integrate host auth" href="/guides/auth-provider">
+    Understand how principal data enters the runtime and where authorization remains framework-managed.
+  </Card>
+  <Card title="Check the reference surface" href="/reference/auth-support-matrix">
+    Review the supported auth and policy combinations before designing around a capability that is not yet implemented.
+  </Card>
+</Columns>
 
 ## Repository Note
 
-This documentation tree is organized as a standalone Mintlify project. The framework code lives in the separate `git@github.com:vaam-store/cratestack.git` repository.
+This documentation tree is a standalone Mintlify project. The framework code itself lives in the separate `git@github.com:vaam-store/cratestack.git` repository.
 
 ## Rust API Docs
 
-The generated Rust documentation is published at `https://rust-doc.cratestack.dev/`.
+Generated Rust API documentation is published at `https://rust-doc.cratestack.dev/`.
