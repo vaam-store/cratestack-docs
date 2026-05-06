@@ -95,7 +95,7 @@ That object is normalized into a `CoolContext` principal surface with two layers
 
 Schema expressions can continue to use the familiar `auth()` shape:
 
-```cool
+```cstack
 @@allow("read", auth() != null && published)
 @@allow("update", authorId == auth().id)
 @@allow("delete", auth().role == "admin")
