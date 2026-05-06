@@ -1,0 +1,289 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "cstack",
+  "scopeName": "source.cstack",
+  "fileTypes": [
+    "cstack"
+  ],
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#annotations"
+    },
+    {
+      "include": "#procedures"
+    },
+    {
+      "include": "#declarations"
+    },
+    {
+      "include": "#assignments"
+    },
+    {
+      "include": "#parameters"
+    },
+    {
+      "include": "#fields"
+    },
+    {
+      "include": "#functions"
+    },
+    {
+      "include": "#constants"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#punctuation"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.documentation.cstack",
+          "match": "///.*$"
+        },
+        {
+          "name": "comment.line.double-slash.cstack",
+          "match": "//.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.cstack",
+          "begin": "\"",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.begin.cstack"
+            }
+          },
+          "end": "\"",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.cstack"
+            }
+          },
+          "patterns": [
+            {
+              "name": "constant.character.escape.cstack",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.cstack",
+          "begin": "'",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.begin.cstack"
+            }
+          },
+          "end": "'",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.cstack"
+            }
+          },
+          "patterns": [
+            {
+              "name": "constant.character.escape.cstack",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "annotations": {
+      "patterns": [
+        {
+          "name": "meta.annotation.cstack",
+          "match": "(@@?)([A-Za-z_][\\w.]+)",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.annotation.cstack"
+            },
+            "2": {
+              "name": "entity.other.attribute-name.cstack"
+            }
+          }
+        }
+      ]
+    },
+    "procedures": {
+      "patterns": [
+        {
+          "match": "\\b(mutation)\\b\\s+\\b(procedure)\\b\\s+([A-Za-z_][\\w]*)",
+          "captures": {
+            "1": {
+              "name": "storage.modifier.cstack"
+            },
+            "2": {
+              "name": "keyword.declaration.function.cstack"
+            },
+            "3": {
+              "name": "entity.name.function.cstack"
+            }
+          }
+        },
+        {
+          "match": "\\b(procedure)\\b\\s+([A-Za-z_][\\w]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.declaration.function.cstack"
+            },
+            "2": {
+              "name": "entity.name.function.cstack"
+            }
+          }
+        }
+      ]
+    },
+    "declarations": {
+      "patterns": [
+        {
+          "match": "\\b(datasource|auth|model|type|enum|mixin)\\b\\s+([A-Za-z_][\\w]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.declaration.cstack"
+            },
+            "2": {
+              "name": "entity.name.type.cstack"
+            }
+          }
+        }
+      ]
+    },
+    "assignments": {
+      "patterns": [
+        {
+          "match": "^(\\s*)([A-Za-z_][\\w]*)(\\s*=)",
+          "captures": {
+            "2": {
+              "name": "variable.other.member.cstack"
+            },
+            "3": {
+              "name": "keyword.operator.assignment.cstack"
+            }
+          }
+        }
+      ]
+    },
+    "parameters": {
+      "patterns": [
+        {
+          "match": "(\\(|,\\s*)([A-Za-z_][\\w]*)(\\s*:\\s*)([A-Z][A-Za-z0-9_]*(?:<[^>]+>)?(?:\\[\\])?\\??)",
+          "captures": {
+            "2": {
+              "name": "variable.parameter.cstack"
+            },
+            "3": {
+              "name": "punctuation.separator.key-value.cstack"
+            },
+            "4": {
+              "name": "support.type.cstack"
+            }
+          }
+        }
+      ]
+    },
+    "fields": {
+      "patterns": [
+        {
+          "match": "^(\\s*)(?!datasource\\b|auth\\b|model\\b|type\\b|enum\\b|mixin\\b|procedure\\b|mutation\\b)([A-Za-z_][\\w]*)(\\s+)([A-Z][A-Za-z0-9_]*(?:<[^>]+>)?(?:\\[\\])?\\??)",
+          "captures": {
+            "2": {
+              "name": "variable.other.member.cstack"
+            },
+            "4": {
+              "name": "support.type.cstack"
+            }
+          }
+        },
+        {
+          "match": "^(\\s*)(?!datasource\\b|auth\\b|model\\b|type\\b|enum\\b|mixin\\b|procedure\\b|mutation\\b)([A-Za-z_][\\w]*)(\\s*)$",
+          "captures": {
+            "2": {
+              "name": "constant.other.enum.cstack"
+            }
+          }
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "support.function.cstack",
+          "match": "\\b(auth|env|dbgenerated|autoincrement|uuid|cuid|now|hasRole|inTenant|lower)\\b(?=\\()"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.cstack",
+          "match": "\\b(true|false|null)\\b"
+        },
+        {
+          "name": "constant.numeric.cstack",
+          "match": "\\b\\d+(?:\\.\\d+)?\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.builtin.cstack",
+          "match": "\\b(String|Int|Boolean|Float|Decimal|DateTime|Json|Bytes|Page)\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.logical.cstack",
+          "match": "&&|\\|\\|"
+        },
+        {
+          "name": "keyword.operator.comparison.cstack",
+          "match": "==|!=|<=|>=|<|>"
+        },
+        {
+          "name": "keyword.operator.assignment.cstack",
+          "match": "="
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.definition.block.cstack",
+          "match": "[{}]"
+        },
+        {
+          "name": "punctuation.definition.arguments.cstack",
+          "match": "[()]"
+        },
+        {
+          "name": "punctuation.definition.array.cstack",
+          "match": "[\\[\\]]"
+        },
+        {
+          "name": "punctuation.separator.cstack",
+          "match": "[,.:?]"
+        }
+      ]
+    }
+  }
+}

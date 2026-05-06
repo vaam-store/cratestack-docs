@@ -81,7 +81,7 @@ Auth-derived defaults:
 
 ### Ownership + published read
 
-```cool
+```cstack
 model Post {
   id String @id @default(cuid())
   title String
@@ -95,7 +95,7 @@ model Post {
 
 ### List/detail split
 
-```cool
+```cstack
 model Post {
   id Int @id
   title String
@@ -115,7 +115,7 @@ Notes:
 
 ### Organization scope + role allowlist
 
-```cool
+```cstack
 model Todo {
   id String @id @default(cuid())
   ownerId String
@@ -129,7 +129,7 @@ model Todo {
 
 ### Recursive relation-aware read
 
-```cool
+```cstack
 model User {
   id Int @id
   email String
@@ -150,7 +150,7 @@ model Post {
 
 ### Moderation with deny override
 
-```cool
+```cstack
 auth SessionUser {
   id Int
   email String
@@ -187,7 +187,7 @@ Notes:
 
 ### Membership-scoped access
 
-```cool
+```cstack
 auth SessionUser {
   id Int
   email String
@@ -221,7 +221,7 @@ Notes:
 
 ### Quantified to-many traversal
 
-```cool
+```cstack
 model Task {
   id Int @id
   projectId Int
@@ -243,7 +243,7 @@ Notes:
 
 ### Vendor catalog visibility
 
-```cool
+```cstack
 auth SessionUser {
   id Int
   email String
@@ -279,7 +279,7 @@ Notes:
 
 ### Procedure allow + deny
 
-```cool
+```cstack
 mutation procedure approvePost(args: ApprovePostInput): Post
   @allow(auth() != null && auth().role == 'admin' && publishNow)
   @deny(postId == 2)
@@ -287,7 +287,7 @@ mutation procedure approvePost(args: ApprovePostInput): Post
 
 ### Procedure auth with nested input paths
 
-```cool
+```cstack
 type ReviewPostInput {
   postId Int
   publishNow Boolean
@@ -309,7 +309,7 @@ Notes:
 
 ### Nested auth context paths
 
-```cool
+```cstack
 type OrganizationScope {
   id String
   slug String
@@ -339,7 +339,7 @@ Notes:
 
 ### Built-in role and tenant checks
 
-```cool
+```cstack
 model AdminPanel {
   id String @id @default(cuid())
   title String
@@ -360,7 +360,7 @@ Notes:
 
 ### DB-backed procedure delegation
 
-```cool
+```cstack
 type InspectPostInput {
   postId String
 }
@@ -380,7 +380,7 @@ Notes:
 
 These should be rejected or treated as future work:
 
-```cool
+```cstack
 @@allow('read', members?[userId == auth().id])
 @@allow('read', members.some.user.role == hasRole('admin'))
 ownerId String @default(lower(auth().email))

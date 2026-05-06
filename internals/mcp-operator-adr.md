@@ -89,7 +89,7 @@ MCP exposure should be explicit.
 
 Recommended initial schema syntax:
 
-```cool
+```cstack
 mcp {
   expose resources
   expose procedures
@@ -98,7 +98,7 @@ mcp {
 
 Model resource exposure:
 
-```cool
+```cstack
 model Post {
   id        Int     @id @default(autoincrement())
   title     String
@@ -113,7 +113,7 @@ model Post {
 
 Procedure tool exposure:
 
-```cool
+```cstack
 mutation procedure publishPost(args: PublishPostInput): Post
   @allow(auth().role == "admin")
   @mcp.tool(name: "publish_post")
@@ -121,7 +121,7 @@ mutation procedure publishPost(args: PublishPostInput): Post
 
 Read procedure exposure:
 
-```cool
+```cstack
 procedure getFeed(limit: Int?): Post[]
   @allow(auth() != null)
   @mcp.tool(name: "get_feed")
@@ -129,7 +129,7 @@ procedure getFeed(limit: Int?): Post[]
 
 Alternative shorthand may be supported later:
 
-```cool
+```cstack
 @mcp.tool
 ```
 
@@ -164,7 +164,7 @@ MCP resources derived from model data must enforce model read policies.
 
 Example:
 
-```cool
+```cstack
 @@allow("read", published || authorId == auth().id)
 ```
 
@@ -176,7 +176,7 @@ MCP tools derived from procedures must enforce procedure-level `@allow` before i
 
 Example:
 
-```cool
+```cstack
 mutation procedure publishPost(args: PublishPostInput): Post
   @allow(auth().role == "admin")
   @mcp.tool(name: "publish_post")
@@ -225,7 +225,7 @@ The exact transport binding is deferred. The important architectural decision is
 
 For a model annotated as:
 
-```cool
+```cstack
 @@mcp.resource("posts")
 ```
 
@@ -257,7 +257,7 @@ Permission: model read policy applies
 
 For a procedure annotated as:
 
-```cool
+```cstack
 @mcp.tool(name: "publish_post")
 ```
 

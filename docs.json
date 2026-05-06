@@ -5,6 +5,16 @@
   "colors": {
     "primary": "#0f766e"
   },
+  "styling": {
+    "codeblocks": {
+      "theme": "css-variables",
+      "languages": {
+        "custom": [
+          "/languages/cstack.tmLanguage.json"
+        ]
+      }
+    }
+  },
   "navigation": {
     "groups": [
       {

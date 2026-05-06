@@ -92,7 +92,7 @@ Recommended first file:
 
 Suggested first-slice shape:
 
-```cool
+```cstack
 datasource db {
   provider = "postgresql"
   url = env("DATABASE_URL")
@@ -309,7 +309,7 @@ If the schema changed but the generated package did not, re-run the generator be
 
 For example, after adding:
 
-```cool
+```cstack
 enum OwnerType {
   merchant
   user

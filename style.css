@@ -1,0 +1,25 @@
+/* CrateStack schema blocks get a dedicated Mint code palette. */
+code-block .shiki[lang="cstack"],
+code-block code[lang="cstack"],
+pre code[lang="cstack"] {
+  --mint-color-background: #08161a;
+  --mint-color-text: #e6fffb;
+  --mint-token-keyword: #5eead4;
+  --mint-token-constant: #fbbf24;
+  --mint-token-string: #86efac;
+  --mint-token-comment: #6fa8a1;
+  --mint-token-parameter: #fde68a;
+  --mint-token-function: #67e8f9;
+  --mint-token-string-expression: #c4b5fd;
+  --mint-token-punctuation: #9ed8d1;
+  --mint-token-link: #2dd4bf;
+}
+
+code-block .shiki[lang="cstack"],
+pre:has(code[lang="cstack"]) {
+  background:
+    radial-gradient(circle at top right, rgba(45, 212, 191, 0.14), transparent 34%),
+    linear-gradient(180deg, #102329 0%, #08161a 100%);
+  border: 1px solid rgba(94, 234, 212, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}

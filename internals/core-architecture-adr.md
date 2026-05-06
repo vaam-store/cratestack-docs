@@ -220,7 +220,7 @@ Rationale:
 
 Procedures are declared in the schema:
 
-```cool
+```cstack
 type PublishPostInput {
   postId Int
 }
@@ -273,7 +273,7 @@ Procedures do not automatically bypass model policies. If a procedure uses the g
 
 Schemas may declare resolver-backed custom fields with a field directive:
 
-```cool
+```cstack
 type Image {
   storageKey String
   thumbnailUrl String @custom
@@ -328,7 +328,7 @@ pub struct CoolContext {
 
 Policies may reference:
 
-```cool
+```cstack
 auth()
 auth().id
 auth().role
@@ -336,7 +336,7 @@ auth().role
 
 Model permissions use:
 
-```cool
+```cstack
 @@allow("read", published || authorId == auth().id)
 @@allow("create", auth() != null)
 @@allow("update", authorId == auth().id)
@@ -345,7 +345,7 @@ Model permissions use:
 
 Procedure permissions use:
 
-```cool
+```cstack
 @allow(auth().role == "admin")
 ```
 

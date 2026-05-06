@@ -166,7 +166,7 @@ That means callers get typed enums at the API edge, while the transport still do
 
 Example:
 
-```cool
+```cstack
 enum Role {
   admin
   member
@@ -793,7 +793,7 @@ So the current rule of thumb is simple:
 
 Concrete boundary example:
 
-```cool
+```cstack
 enum PaymentInstrumentStatus {
   active
   inactive
@@ -807,7 +807,7 @@ model PaymentInstrument {
 
 This is supported for generated Rust and Dart clients.
 
-```cool
+```cstack
 enum Role {
   admin
   user

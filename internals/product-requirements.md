@@ -282,7 +282,7 @@ Procedures are schema-defined custom business operations implemented by the appl
 
 Example:
 
-```cool
+```cstack
 mutation procedure publishPost(args: PublishPostInput): Post
   @allow(auth().role == "admin")
 ```
@@ -315,7 +315,7 @@ Permissions are schema-defined authorization rules.
 
 Model example:
 
-```cool
+```cstack
 @@allow("read", published || authorId == auth().id)
 @@allow("update", authorId == auth().id)
 @@allow("delete", auth().role == "admin")
@@ -323,7 +323,7 @@ Model example:
 
 Procedure example:
 
-```cool
+```cstack
 mutation procedure publishPost(args: PublishPostInput): Post
   @allow(auth().role == "admin")
 ```
@@ -349,7 +349,7 @@ The host application or framework is responsible for:
 
 Schemas may declare resolver-backed custom fields:
 
-```cool
+```cstack
 type Image {
   storageKey String
   thumbnailUrl String @custom
@@ -405,7 +405,7 @@ HTTP request -> COSE open -> CBOR decode -> Rust type
 
 ## 7. Example Schema
 
-```cool
+```cstack
 datasource db {
   provider = "postgresql"
   url = env("DATABASE_URL")
@@ -673,7 +673,7 @@ Read, update, and delete policies must be injected into SQL where possible.
 
 Example policy:
 
-```cool
+```cstack
 @@allow("update", authorId == auth().id)
 ```
 
@@ -712,7 +712,7 @@ execute
 
 The schema syntax may omit the explicit action for procedures:
 
-```cool
+```cstack
 @allow(auth() != null)
 ```
 
@@ -726,7 +726,7 @@ Multiple allow rules for the same action are OR-combined.
 
 Example:
 
-```cool
+```cstack
 @@allow("read", published)
 @@allow("read", authorId == auth().id)
 ```
@@ -741,7 +741,7 @@ published OR authorId == auth().id
 
 Policies may reference:
 
-```cool
+```cstack
 auth()
 auth().id
 auth().role
@@ -757,7 +757,7 @@ Procedure-level permissions are checked before calling the application-provided 
 
 Example:
 
-```cool
+```cstack
 mutation procedure publishPost(args: PublishPostInput): Post
   @allow(auth().role == "admin")
 ```
@@ -790,7 +790,7 @@ Procedures use the same policy-protected ORM methods as all other code.
 
 CrateStack supports:
 
-```cool
+```cstack
 procedure getFeed(limit: Int?): Post[]
 mutation procedure signUp(args: SignUpInput): User
 ```
@@ -1006,7 +1006,7 @@ Legacy `or=` remains supported only as a compatibility convenience for a top-lev
 
 Current relation support requires explicit field metadata:
 
-```cool
+```cstack
 author User @relation(fields:[authorId],references:[id])
 sessions Session[] @relation(fields:[id],references:[userId])
 ```
