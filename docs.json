@@ -22,6 +22,7 @@
         "pages": [
           "index",
           "overview/current-state",
+          "overview/banking-readiness",
           "overview/release-track"
         ]
       },
@@ -36,7 +37,20 @@
         "group": "Guides",
         "pages": [
           "guides/telemetry",
+          "guides/validators",
           "adoption/vaam-catalog"
+        ]
+      },
+      {
+        "group": "Banking Readiness",
+        "pages": [
+          "guides/idempotency",
+          "guides/optimistic-locking",
+          "guides/audit-log",
+          "guides/transaction-isolation",
+          "guides/rate-limiting",
+          "guides/soft-delete",
+          "guides/migrations"
         ]
       },
       {
@@ -57,7 +71,10 @@
         "group": "Reference",
         "pages": [
           "reference/mixins",
-          "reference/auth-support-matrix"
+          "reference/field-attributes",
+          "reference/scalars",
+          "reference/auth-support-matrix",
+          "reference/crypto"
         ]
       },
       {

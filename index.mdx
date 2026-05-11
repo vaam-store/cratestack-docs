@@ -67,6 +67,7 @@ CrateStack is built for teams that want framework leverage without giving up Rus
 4. generated policy enforcement for the supported subset
 5. generated Rust and Dart client surfaces
 6. reusable schema mixins for shared field sets
+7. banking-grade primitives: idempotency, optimistic locking, transactional audit, explicit transaction isolation, soft delete, rate limiting, validators, Decimal scalar, forward-only migrations
 
 <Warning>
 CrateStack is usable today, but the public `v0` track is narrower than the broader target architecture. COSE transport, parts of the client runtime, richer schema coverage, and some policy features are still deferred. Use [Current State](/overview/current-state) as the source of truth for adoption decisions.
@@ -81,11 +82,17 @@ CrateStack is usable today, but the public `v0` track is narrower than the broad
   <Card title="Ship a first service" href="/getting-started/quickstart">
     Follow the minimal path from schema file to running Rust service with generated runtime pieces.
   </Card>
+  <Card title="Adopt the banking-grade slice" href="/overview/banking-readiness">
+    Review the idempotency, audit, optimistic-locking, isolation, and rate-limiting primitives shipped for regulated workloads.
+  </Card>
   <Card title="Integrate host auth" href="/guides/auth-provider">
     Understand how principal data enters the runtime and where authorization remains framework-managed.
   </Card>
   <Card title="Check the reference surface" href="/reference/auth-support-matrix">
     Review the supported auth and policy combinations before designing around a capability that is not yet implemented.
+  </Card>
+  <Card title="Browse field attributes" href="/reference/field-attributes">
+    The full `.cstack` field attribute surface, including exposure controls, validators, and `@version`.
   </Card>
 </Columns>
 

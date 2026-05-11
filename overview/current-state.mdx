@@ -19,6 +19,16 @@ CrateStack already provides a usable Rust-first backend slice, but it is not yet
 8. policy enforcement for the current supported model and procedure policy subset
 9. generated telemetry for procedure wrappers, procedure routes, and model list routes
 10. top-level `mixin` declarations plus model `@use(...)` expansion for reusable field sets
+11. duplicate-execution protection via `IdempotencyLayer` + `SqlxIdempotencyStore` with reservation tokens and header replay
+12. optimistic concurrency via `@version` with `If-Match` / `ETag` round-tripping
+13. transactional audit log via `@@audit` + `cratestack_audit` + pluggable `AuditSink`
+14. explicit transaction isolation via `run_in_isolated_tx` + procedure `@isolation`, with commit-time retry
+15. per-principal rate limiting via `RateLimitLayer` + pluggable `RateLimitStore`
+16. soft delete via `@@soft_delete`
+17. forward-only migrations via `Migration` + `apply_pending` with checksum drift detection
+18. runtime validators (`@length`, `@range` on Int + Decimal, `@email`, `@regex`, `@uri`, `@iso4217`) with PII-safe error messages
+19. Decimal scalar with selectable backend (`rust_decimal` or `bigdecimal`)
+20. FIPS-validated TLS provider toggle via the `crypto-aws-lc-rs` workspace feature
 
 ## Still Narrow Or Deferred
 
@@ -28,6 +38,8 @@ CrateStack already provides a usable Rust-first backend slice, but it is not yet
 4. production-stable exact non-Rust selection typing is not complete
 5. richer exposure controls and some field-level policy features are still deferred
 6. the client runtime remains partially spiked rather than fully mature
+7. the shipped rate-limit store is in-memory (single-replica); the trait is pluggable
+8. the migration runner is forward-only — schema-diff generation and zero-downtime coordination remain out of scope
 
 ## Best Fit Right Now
 
@@ -37,10 +49,12 @@ CrateStack is currently strongest for:
 2. teams that want one schema to drive delegates, routes, and client contracts
 3. services that benefit from generated policy checks and typed query builders
 4. CBOR-first or CBOR-aware HTTP APIs that still need JSON fallback
+5. banking-adjacent workloads that need transactional audit, optimistic locking, idempotency, and explicit isolation out of the box
 
 ## Read Next
 
 1. `../getting-started/quickstart` for a minimal setup path
-2. `../guides/auth-provider` for the host auth boundary
-3. `../architecture/transport-architecture` for transport design
-4. `../reference/auth-support-matrix` for the current auth and policy surface
+2. `./banking-readiness` for the regulated-workload primitives shipped on `feat/banking-readiness`
+3. `../guides/auth-provider` for the host auth boundary
+4. `../architecture/transport-architecture` for transport design
+5. `../reference/auth-support-matrix` for the current auth and policy surface

@@ -1,0 +1,65 @@
+---
+title: Banking Readiness
+description: Verified summary of the banking-grade primitives shipped on the `feat/banking-readiness` track.
+---
+
+# Banking Readiness
+
+CrateStack ships a coherent set of primitives that regulated workloads ask for
+out of the box. The set is opt-in — adding `@@audit` to a model, or wrapping
+the router in `IdempotencyLayer`, costs nothing for services that don't need
+the guarantees.
+
+## What's In
+
+The current banking-grade slice covers:
+
+1. duplicate-execution protection via `IdempotencyLayer` + `SqlxIdempotencyStore`
+2. optimistic concurrency via `@version` + `If-Match` / `ETag` round-tripping
+3. transactional audit log via `@@audit` + `cratestack_audit` + pluggable `AuditSink`
+4. explicit transaction isolation via `run_in_isolated_tx` + `@isolation`
+5. per-principal rate limiting via `RateLimitLayer` + `InMemoryRateLimitStore`
+6. soft-delete via `@@soft_delete`
+7. forward-only migrations via `Migration` + `apply_pending` with checksum drift detection
+8. runtime validators (`@length`, `@range`, `@email`, `@regex`, `@uri`, `@iso4217`) with PII-safe error messages
+9. Decimal scalar with selectable backend (`rust_decimal` or `bigdecimal`)
+10. FIPS-validated TLS provider via the `crypto-aws-lc-rs` workspace feature
+
+## What's Not
+
+The track stops short of:
+
+1. zero-downtime migration generation from schema diffs
+2. cluster-wide rate limiting (the shipped store is in-memory; the trait is pluggable)
+3. cluster-wide idempotency replication (PG is the single source of truth)
+4. signed audit chains / immutable WORM storage
+5. field-level read masking or write blocking — model-level only
+6. an HSM-backed signing or key-management abstraction
+
+## Adoption Order
+
+Banks typically adopt these in the order risk dictates. A realistic path:
+
+1. start with `@@audit` on every mutating model — gets you the forensic trail before anything else
+2. add `@version` to balances, ledger entries, transfers — protects against lost updates
+3. wrap mutating routes with `IdempotencyLayer` — protects against duplicate execution under client retries
+4. switch transfer/settlement procedures to `@isolation("serializable")` — closes the read-write skew window
+5. add `RateLimitLayer` per principal — caps abuse without code changes per route
+6. switch hard delete to `@@soft_delete` where retention rules require it
+7. enable the FIPS provider when production keys move into a validated module
+
+Each step is independent and can be reviewed in isolation.
+
+## Read Next
+
+1. [Idempotency](../guides/idempotency) for the duplicate-execution guarantee
+2. [Optimistic locking](../guides/optimistic-locking) for `@version` + ETag flow
+3. [Audit log](../guides/audit-log) for `@@audit` and the transactional outbox
+4. [Transaction isolation](../guides/transaction-isolation) for `run_in_isolated_tx` and the retry policy
+5. [Rate limiting](../guides/rate-limiting) for the per-principal token bucket
+6. [Soft delete](../guides/soft-delete) for `@@soft_delete` semantics
+7. [Migrations](../guides/migrations) for the forward-only runner
+8. [Validators](../guides/validators) for `@length`, `@range`, `@email`, `@regex`, `@uri`, `@iso4217`
+9. [Field attributes](../reference/field-attributes) for `@readonly`, `@server_only`, `@pii`, `@sensitive`, `@version`
+10. [Scalars](../reference/scalars) for the Decimal backend selection
+11. [Crypto](../reference/crypto) for the FIPS provider toggle

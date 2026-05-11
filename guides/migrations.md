@@ -1,0 +1,151 @@
+---
+title: Migrations
+description: Forward-only migration runner with checksum drift detection and per-migration transaction semantics.
+---
+
+# Migrations
+
+Banks ship database changes the same way they ship code: a reviewable SQL
+diff, recorded in source control, applied once, never edited after the
+fact. CrateStack's migration runner enforces that contract.
+
+## Shape
+
+A migration is a struct, not a file convention — banks integrate it into
+whatever build tooling they already use:
+
+```rust
+use cratestack::Migration;
+
+let migrations = vec![
+    Migration {
+        id: "20260101000000_create_accounts".to_owned(),
+        description: "create accounts table".to_owned(),
+        up: r#"
+            CREATE TABLE accounts (
+                id BIGINT PRIMARY KEY,
+                balance NUMERIC NOT NULL DEFAULT 0,
+                version BIGINT NOT NULL DEFAULT 0
+            );
+            CREATE INDEX accounts_balance_idx ON accounts (balance);
+        "#.to_owned(),
+        down: None,
+    },
+    Migration {
+        id: "20260201000000_add_currency".to_owned(),
+        description: "add currency to accounts".to_owned(),
+        up: "ALTER TABLE accounts ADD COLUMN currency TEXT NOT NULL DEFAULT 'USD';".to_owned(),
+        down: None,
+    },
+];
+```
+
+Conventions banks adopt:
+
+1. `id` is sortable — `YYYYMMDDHHMMSS_<slug>` is canonical
+2. `description` is short and human-readable
+3. `up` is the SQL applied forward; multiple statements are split on `;` and run in one transaction
+4. `down` is recorded but **never executed** by the runner — irreversible-by-default is the safe banking posture
+
+## Running
+
+```rust
+use cratestack::{apply_pending, status, ensure_migrations_table};
+
+ensure_migrations_table(&pool).await?;
+let applied: Vec<String> = apply_pending(&pool, &migrations).await?;
+```
+
+The runner:
+
+1. compares each input migration against `cratestack_migrations`
+2. skips already-applied rows whose checksum matches
+3. aborts with `CoolError::Internal` if an applied row's checksum has drifted
+4. for each pending row: opens a transaction, executes every statement in `up`, inserts the record into `cratestack_migrations`, commits
+
+A failure in any statement rolls the whole migration back. A multi-
+statement script with a broken second statement leaves zero artefacts —
+the first `CREATE TABLE` rolls back with the failed `CREATE INDEX`, and
+`cratestack_migrations` does **not** record the partial attempt.
+
+## Checksum drift
+
+Each migration's checksum is `SHA-256(id || \0 || description || \0 || up)`.
+Editing an already-applied migration in source control changes the
+checksum:
+
+```text
+migration `20260101000000_create_accounts` is recorded as applied but its
+SQL has changed; resolve drift before continuing
+```
+
+The runner refuses to apply anything until the drift is resolved. Banks
+treat this as a release-process failure to escalate to humans — there is
+no `--force` flag. Restoring the original SQL or rolling forward with a
+new migration are the two acceptable resolutions.
+
+## Inspecting state
+
+`status(&pool, &migrations)` returns one `MigrationState` per input:
+
+```rust
+pub struct MigrationState {
+    pub id: String,
+    pub status: MigrationStatus,
+}
+
+pub enum MigrationStatus {
+    Pending,
+    Applied,
+    ChecksumMismatch,
+}
+```
+
+Banks plug this into a deployment dashboard so operators see drift before
+the next deploy attempt.
+
+## Multi-statement scripts
+
+Postgres prepared statements accept exactly one command per round-trip,
+so the runner splits `up` on `;` and executes each non-empty statement
+sequentially inside the same transaction. Common patterns this enables:
+
+```sql
+CREATE TABLE transfers (
+    id BIGINT PRIMARY KEY,
+    amount BIGINT NOT NULL,
+    status TEXT NOT NULL
+);
+CREATE INDEX transfers_status_idx ON transfers (status);
+INSERT INTO transfers_status_lookup (key, label)
+    VALUES ('pending', 'Pending'), ('settled', 'Settled');
+```
+
+All three statements land atomically. A failure in the `INSERT` rolls the
+`CREATE TABLE` and `CREATE INDEX` back together.
+
+## What this is not
+
+1. not a schema-diff generator — banks write their migrations by hand because the change has to be reviewable as a SQL diff
+2. not a `down`/rollback engine — `down` is recorded for audit but never run
+3. not a parallel-applier — migrations are sequential and serialized through the tracking table
+4. not a long-running-migration coordinator — banks executing a 6-hour `ALTER TABLE` use their own backfill tooling and record the migration as a no-op when the backfill is done
+
+## Schema
+
+```sql
+CREATE TABLE cratestack_migrations (
+    id TEXT PRIMARY KEY,
+    description TEXT NOT NULL,
+    checksum BYTEA NOT NULL,
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+The DDL is exposed as `cratestack::MIGRATIONS_TABLE_DDL` and applied
+idempotently by `ensure_migrations_table`.
+
+## Read Next
+
+1. [Audit log](./audit-log) — banks frequently land `@@audit` retroactively via a migration
+2. [Soft delete](./soft-delete) — `deleted_at` columns are typically added by a follow-up migration on existing models
