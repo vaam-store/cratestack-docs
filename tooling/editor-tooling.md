@@ -58,7 +58,7 @@ Recommended workspace settings for this repo:
 {
   "rust-analyzer.linkedProjects": [
     "cratestack/Cargo.toml",
-    "vaam-backends/Cargo.toml"
+    "your-backend/Cargo.toml"
   ],
   "rust-analyzer.procMacro.enable": true,
   "rust-analyzer.cargo.buildScripts.enable": true,

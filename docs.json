@@ -37,8 +37,7 @@
         "group": "Guides",
         "pages": [
           "guides/telemetry",
-          "guides/validators",
-          "adoption/vaam-catalog"
+          "guides/validators"
         ]
       },
       {

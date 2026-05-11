@@ -103,7 +103,7 @@ Current implementation note:
 
 1. runtime config currently exposes only `InMemory` and `JsonFile`
 2. the SQLite-backed store exists as `cratestack-client-store-sqlite`, and the Redis-backed store exists as `cratestack-client-store-redis`
-3. Rust backend services can attach the Redis store directly with `CratestackClient::with_state_store(...)` or `with_optional_state_store(...)`; Vaam uses one Redis prefix per caller/target pair for generated backend-to-backend clients
+3. Rust backend services can attach the Redis store directly with `CratestackClient::with_state_store(...)` or `with_optional_state_store(...)`; production deployments typically use one Redis prefix per caller/target pair for generated backend-to-backend clients
 4. neither SQLite nor Redis is yet selectable through the public Dart or Flutter runtime config surface
 5. idempotency, replay metadata, and cache metadata are still deferred beyond the current request journal and state version markers
 
@@ -680,13 +680,13 @@ let config = FlutterRuntimeConfig {
 };
 ```
 
-## `vaam-mobile` Integration Path
+## `your-mobile-app` Integration Path
 
-For `frontends/vaam-mobile`, treat the generated package and the runtime bridge as separate concerns.
+For `frontends/your-mobile-app`, treat the generated package and the runtime bridge as separate concerns.
 
 ### What works today
 
-1. generate the Flutter-shaped package into `frontends/vaam-mobile/packages/<client_name>`
+1. generate the Flutter-shaped package into `frontends/your-mobile-app/packages/<client_name>`
 2. add it as a path dependency in the mobile app
 3. provide a `CrateStackRuntimeBridge` implementation from the app side
 4. override the generated Riverpod bridge provider
@@ -696,7 +696,7 @@ From `cratestack/`, generation looks like:
 ```bash
 cargo run -p cratestack-cli -- generate-dart \
   --schema "crates/cratestack/tests/fixtures/blog.cstack" \
-  --out "../frontends/vaam-mobile/packages/blog_client" \
+  --out "../frontends/your-mobile-app/packages/blog_client" \
   --library-name blog_client \
   --base-path "/api"
 ```
@@ -724,7 +724,7 @@ That future path keeps these concerns in Rust:
 3. future signing and canonicalization
 4. runtime persistence choices
 
-### Current recommendation for `vaam-mobile`
+### Current recommendation for `your-mobile-app`
 
 Use the generated package API today, but treat the bridge as the integration seam that will later swap from app-owned wiring to a fuller Rust-backed runtime bridge.
 
@@ -774,8 +774,8 @@ Example:
 
 ```bash
 cargo run -p cratestack-cli -- generate-dart \
-  --schema "../vaam-backends/services/auth-service/schema/auth.cstack" \
-  --out "../frontends/vaam-mobile/packages/gen_auth_client" \
+  --schema "../your-backend/services/auth-service/schema/auth.cstack" \
+  --out "../frontends/your-mobile-app/packages/gen_auth_client" \
   --library-name gen_auth_client \
   --base-path "/api"
 ```

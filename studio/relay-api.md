@@ -164,7 +164,7 @@ This design naturally suggests a new command such as:
 
 ```bash
 cratestack generate-studio \
-  --schema "../vaam-backends/services/payment-gateway/schema/payment.cstack" \
+  --schema "../your-backend/services/payment-gateway/schema/payment.cstack" \
   --out "../tools/studios/payment-gateway-studio" \
   --name payment-gateway-studio \
   --service-url "http://127.0.0.1:8085" \

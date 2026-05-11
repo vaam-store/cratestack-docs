@@ -19,9 +19,9 @@ The generated app is:
 
 Use this generated workspace as the current reference output:
 
-1. `tools/studios/vaam-backends-studio-multi`
+1. `tools/studios/backends-studio-multi`
 
-It was generated from all current VAAM backend schemas.
+It was generated from all current backend schemas in the multi-service workspace.
 
 ## Files To Edit
 
@@ -62,7 +62,7 @@ These checks were already run successfully against the current implementation:
 
 If you touch web templates, also run:
 
-1. `cd tools/studios/vaam-backends-studio-multi/web`
+1. `cd tools/studios/backends-studio-multi/web`
 2. `pnpm install`
 3. `trunk build --release`
 

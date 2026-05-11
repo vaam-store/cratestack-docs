@@ -20,12 +20,12 @@ Current generator entrypoint:
 
 ```bash
 cratestack generate-studio \
-  --schema ../vaam-backends/services/auth-service/schema/auth.cstack \
+  --schema ../your-backend/services/auth-service/schema/auth.cstack \
   --service-url http://127.0.0.1:8081 \
-  --schema ../vaam-backends/services/vendor-service/schema/vendor.cstack \
+  --schema ../your-backend/services/vendor-service/schema/vendor.cstack \
   --service-url http://127.0.0.1:8082 \
-  --out ../tools/studios/vaam-backends-studio \
-  --name vaam-backends-studio
+  --out ../tools/studios/backends-studio \
+  --name backends-studio
 ```
 
 Current CLI arguments are:
@@ -235,7 +235,7 @@ The most important unfinished Studio work is:
 
 Canonical generated multi-context output for this repo currently lives at:
 
-1. `tools/studios/vaam-backends-studio-multi`
+1. `tools/studios/backends-studio-multi`
 
 If you need to change generation behavior, the primary source files are:
 
@@ -269,6 +269,6 @@ What still needs deliberate follow-up, in recommended order:
 2. Add manifest-driven generation so callers do not need to repeat `--schema` and `--service-url` pairs manually.
 3. Improve ad-hoc procedure query ergonomics so query tabs can use generated structured forms instead of raw JSON only.
 4. If touching web templates, explicitly run the generated frontend build path:
-   `cd tools/studios/vaam-backends-studio-multi/web && pnpm install && trunk build --release`.
+   `cd tools/studios/backends-studio-multi/web && pnpm install && trunk build --release`.
 
 Do not treat older target-state docs in this folder as executable truth without checking them against this file first.

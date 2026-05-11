@@ -101,7 +101,7 @@ Optional but useful for:
 
 ## Suggested Output Location In This Repo
 
-Because the repo already has React and Next.js surfaces, this generated Yew Studio should live in a dedicated tooling area rather than replacing `frontends/vaam-admin`.
+Because the repo already has React and Next.js surfaces, this generated Yew Studio should live in a dedicated tooling area rather than replacing `frontends/admin-frontend`.
 
 Recommended examples:
 

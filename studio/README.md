@@ -56,19 +56,19 @@ If you are the next developer picking this up, start here:
 2. `cratestack/crates/cratestack-cli/src/main.rs` for CLI input shape
 3. `cratestack/crates/cratestack-studio-generator/src/lib.rs` for generator data flow
 4. `cratestack/crates/cratestack-studio-generator/templates/**` for generated backend/frontend behavior
-5. `tools/studios/vaam-backends-studio-multi/` for the latest canonical generated multi-context output
+5. `tools/studios/backends-studio-multi/` for the latest canonical generated multi-context output
 
 Verified generator/backend checks already run for the current implementation:
 
 1. `cargo test -p cratestack-studio-generator`
 2. `cargo test -p cratestack-cli`
-3. generate a fresh multi-context Studio workspace from all VAAM backend schemas
+3. generate a fresh multi-context Studio workspace from all backend schemas in the multi-service workspace
 4. `cargo check --workspace` inside the generated workspace
 5. `cargo run -p <generated-backend-crate>` inside the generated workspace
 
 The next developer should still run the generated frontend build path explicitly when changing web templates:
 
-1. `cd tools/studios/vaam-backends-studio-multi/web`
+1. `cd tools/studios/backends-studio-multi/web`
 2. `pnpm install`
 3. `trunk build --release`
 
@@ -91,7 +91,7 @@ That is why the generated backend is part of the product design, not a convenien
 
 This repo already has React-based web surfaces.
 
-So the Yew Studio path should stay clearly separated as a generated tooling surface rather than quietly replacing `frontends/vaam-admin`.
+So the Yew Studio path should stay clearly separated as a generated tooling surface rather than quietly replacing `frontends/admin-frontend`.
 
 Recommended shape:
 

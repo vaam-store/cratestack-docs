@@ -140,7 +140,7 @@ The MVP is successful if a developer can:
 
 ```bash
 cratestack generate-studio \
-  --schema "../vaam-backends/services/auth-service/schema/auth.cstack" \
+  --schema "../your-backend/services/auth-service/schema/auth.cstack" \
   --out "../tools/studios/auth-service-studio" \
   --name auth-service-studio \
   --service-url "http://127.0.0.1:8081" \
