@@ -1,13 +1,23 @@
 # CrateStack v0 PRD
 
+## 0.3.0 macro-split update
+
+This PRD was authored when CrateStack exposed a single `include_schema!` macro. As of 0.3.0, the developer surface is **three role-specific macros**, replacing the single one:
+
+- `include_server_schema!("schema.cstack", db = Postgres)` — server / sqlx
+- `include_embedded_schema!("schema.cstack")` — embedded / rusqlite (native + browser via OPFS)
+- `include_client_schema!("schema.cstack")` — HTTP client (renamed from `include_client_macro!`)
+
+The PRD's intent (one schema, typed delegates, generated routes, policy enforcement) is unchanged. References to `include_schema!` below describe the developer surface in **server contexts** unless otherwise noted; they map to `include_server_schema!("…", db = Postgres)` in 0.3.0+.
+
 ## 1. Product Summary
 
 CrateStack is a Rust-native, schema-first backend framework layer for building typed database-backed HTTP REST APIs, generated clients, declarative authorization policies, and custom business procedures.
 
-Developers define their data model, authorization rules, field exposure directives, custom fields, and procedures in `.cstack` schema files, then include them in Rust using:
+Developers define their data model, authorization rules, field exposure directives, custom fields, and procedures in `.cstack` schema files, then include them in Rust using one of the role-specific macros — for example, in a server crate:
 
 ```rust
-cratestack::include_schema!("schema.cstack");
+cratestack::include_server_schema!("schema.cstack", db = Postgres);
 ```
 
 The macro generates a typed ORM client, canonical REST CRUD routes, procedure interfaces, request/response types, generated client metadata, and policy enforcement code. CrateStack uses `sqlx` behind the scenes for database access and supports pluggable transport composition so applications can use JSON, CBOR, sequence-aware transports such as `application/cbor-seq`, and future COSE envelopes without sacrificing developer experience.

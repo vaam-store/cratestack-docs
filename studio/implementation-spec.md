@@ -363,7 +363,7 @@ Bad:
 
 ### Goal
 
-Define the first Rust-native metadata surface that `include_schema!` should generate for Studio.
+Define the first Rust-native metadata surface that `include_server_schema!` should generate for Studio (Studio is a server-side admin surface, so the metadata lives in the server macro's output).
 
 ### Generated Rust Surface
 

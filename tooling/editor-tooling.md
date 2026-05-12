@@ -6,12 +6,12 @@ This document records the current state of CrateStack editor support, how to use
 
 CrateStack has two editor surfaces:
 
-* Rust files that consume `cratestack::include_schema!(...)`
+* Rust files that consume one of the role-specific schema macros — `cratestack::include_server_schema!(...)`, `cratestack::include_embedded_schema!(...)`, or `cratestack::include_client_schema!(...)`
 * `.cstack` schema files authored directly
 
 Those surfaces have different constraints.
 
-Rust support depends on a real Cargo workspace because `include_schema!` is a proc macro that expands relative to a real schema path.
+Rust support depends on a real Cargo workspace because the schema macros are proc-macros that expand relative to a real schema path.
 
 `.cstack` support is intentionally split out into a standalone language server so basic schema authoring does not require a full host project checkout.
 
@@ -19,11 +19,11 @@ Rust support depends on a real Cargo workspace because `include_schema!` is a pr
 
 Implemented in this repo today:
 
-* `crates/cratestack-lsp` provides a standalone language server for `.cstack` files
+* `crates/cratestack-lsp` provides a standalone language server for `.cstack` files (built on the actively-maintained `tower-lsp-server` 0.23 fork as of 0.3.0; the previous `tower-lsp` 0.20 dep had been unmaintained since 2024)
 * `packages/cratestack-vscode` provides the VS Code extension wrapper that launches `cratestack-lsp`
 * `cratestack-cli check --format json` provides machine-readable diagnostics for CI or editor fallback integrations
 * parser and semantic structures now preserve schema docs and source spans needed for editor features and generated Rust docs
-* `include_schema!` now emits Rust `#[doc = "..."]` attributes from schema-authored comments
+* the schema macros now emit Rust `#[doc = "..."]` attributes from schema-authored comments
 
 Implemented `.cstack` editor features:
 
@@ -50,7 +50,7 @@ Current limitations:
 
 ## Rust Setup In VS Code
 
-For Rust consumers of `include_schema!`, use `rust-analyzer` and point it at the workspace or workspaces that actually build the schema consumer.
+For Rust consumers of the CrateStack schema macros, use `rust-analyzer` and point it at the workspace or workspaces that actually build the schema consumer.
 
 Recommended workspace settings for this repo:
 

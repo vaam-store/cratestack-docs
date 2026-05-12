@@ -32,11 +32,18 @@ model Post {
 }
 ```
 
-```rust
-use cratestack::include_schema;
+Pick the macro that matches the crate's role:
 
-include_schema!("schema.cstack");
+```rust
+// Server crate
+use cratestack::include_server_schema;
+
+include_server_schema!("schema.cstack", db = Postgres);
 ```
+
+The `db = Postgres` argument is required today (the only accepted value). The parser is wired so future `db = MySql` / `db = Sqlite` support is non-breaking at call sites that already pass `Postgres`.
+
+Embedded (mobile / desktop / browser-via-OPFS) and HTTP-client crates use different macros — see [Offline-First Embedded SQLite](../guides/offline-first-sqlite) and the client-runtime docs respectively.
 
 ## 2. Build The Generated Runtime
 
@@ -94,4 +101,4 @@ let app = axum::Router::new().nest(
 1. `../guides/auth-provider` for the host auth boundary
 2. `../architecture/transport-architecture` for codec, framing, and envelope rules
 3. `../overview/banking-readiness` for the regulated-workload primitives
-4. `../guides/offline-first-sqlite` if you want to run the same schema **on-device** against a local SQLite database — same `.cstack` file, sync API, no tokio, designed for Flutter-over-FFI mobile apps
+4. `../guides/offline-first-sqlite` if you want to run the same schema **embedded** against a local SQLite database — same `.cstack` file, sync API on native, OPFS-backed in the browser, no tokio

@@ -11,25 +11,25 @@ CrateStack already provides a usable Rust-first backend slice, but it is not yet
 
 1. a Rust 2024 multi-crate workspace under `cratestack/`
 2. schema parsing and semantic validation for an initial `.cstack` subset
-3. compile-time `include_schema!` expansion into a generated full server/client `cratestack_schema` module
+3. compile-time **role-specific macros**: `include_server_schema!("…", db = Postgres)`, `include_embedded_schema!`, `include_client_schema!` — each emits a `cratestack_schema` module shaped for one deployment shape, with strict disjoint backend output (server never emits rusqlite, embedded never emits sqlx)
 4. SQLx-backed model delegates for `create`, `find_many`, `find_unique`, `update`, and `delete`
 5. generated Axum model CRUD and procedure routes
 6. host-owned authentication through `AuthProvider` and internal binding through `bind_auth(...)` and `bind_context(...)`
-7. generated Rust client support through both full-schema `include_schema!` and client-only `include_client_macro!`, plus generated Dart package output
-8. policy enforcement for the current supported model and procedure policy subset
+7. generated Rust client support via `include_client_schema!`, plus generated Dart package output
+8. policy enforcement for the current supported model and procedure policy subset (server only)
 9. generated telemetry for procedure wrappers, procedure routes, and model list routes
 10. top-level `mixin` declarations plus model `@use(...)` expansion for reusable field sets
 11. duplicate-execution protection via `IdempotencyLayer` with reservation tokens and header replay, backed by either `SqlxIdempotencyStore` (Postgres) or `RedisIdempotencyStore` (Redis, via `cratestack-redis`)
 12. optimistic concurrency via `@version` with `If-Match` / `ETag` round-tripping
-13. transactional audit log via `@@audit` + `cratestack_audit` + pluggable `AuditSink`
+13. transactional audit log via `@@audit` + `cratestack_audit` + pluggable `AuditSink` (server)
 14. explicit transaction isolation via `run_in_isolated_tx` + procedure `@isolation`, with commit-time retry
 15. per-principal rate limiting via `RateLimitLayer` + pluggable `RateLimitStore`
-16. soft delete via `@@soft_delete`
+16. soft delete via `@@soft_delete` (server and embedded)
 17. forward-only migrations via `Migration` + `apply_pending` with checksum drift detection
 18. runtime validators (`@length`, `@range` on Int + Decimal, `@email`, `@regex`, `@uri`, `@iso4217`) with PII-safe error messages
 19. Decimal scalar with selectable backend (`rust_decimal` or `bigdecimal`)
 20. FIPS-validated TLS provider toggle via the `crypto-aws-lc-rs` workspace feature
-21. on-device SQLite backend via `cratestack-rusqlite`: sync API, bundled SQLite, the same `include_schema!`-driven `ModelDelegate` shape as the server, with `Decimal`, `Uuid`, `DateTime`, and `Json` round-tripping exactly through canonical TEXT storage; intended for offline-first mobile apps that bridge to UI toolkits like Flutter over FFI
+21. **embedded SQLite backend** via `cratestack-rusqlite`: sync API, bundled SQLite, the same `include_embedded_schema!`-driven `ModelDelegate` shape as the server, with `Decimal`, `Uuid`, `DateTime`, and `Json` round-tripping exactly through canonical TEXT storage. Compiles to **native** (mobile via FFI, desktop) AND **`wasm32-unknown-unknown`** (browser, OPFS-backed via `sqlite-wasm-rs` + `sqlite-wasm-vfs`). One source, three targets.
 22. dialect-agnostic SQL primitives crate `cratestack-sql` shared by both backends — value types, filter AST, order AST, model descriptor, and a narrow `Dialect` trait that only varies on placeholder syntax
 
 ## Still Narrow Or Deferred
@@ -42,8 +42,10 @@ CrateStack already provides a usable Rust-first backend slice, but it is not yet
 6. the client runtime remains partially spiked rather than fully mature
 7. the shipped rate-limit store is in-memory (single-replica); the trait is pluggable
 8. the migration runner is forward-only — schema-diff generation and zero-downtime coordination remain out of scope
-9. the on-device SQLite backend does **not** enforce `@@allow` / `@@deny` policies at SQL render time (by design — the device is single-user; authorization is the app's concern there)
-10. the umbrella `cratestack` crate compiles both backends unconditionally; binary-size feature gating to opt out of the sqlx/tokio stack on mobile-only builds is planned but not yet shipped
+9. the embedded SQLite backend does **not** enforce `@@allow` / `@@deny` policies at SQL render time (by design — the client is untrusted; authorization is the server's concern)
+10. `@@audit` and `@@emit` directives are currently no-ops in `include_embedded_schema!`; the local-journal / local-event-bus implementations (needed for sync-engine wiring) land in a follow-up release
+11. the umbrella `cratestack` crate compiles both backends unconditionally; binary-size feature gating to opt out of the sqlx/tokio stack on embedded-only builds is planned but not yet shipped (embedded-only consumers can already depend directly on `cratestack-macros` + `cratestack-rusqlite` to shed the server-side weight)
+12. multi-DB server support — `include_server_schema!` accepts a `db = Postgres` argument but only Postgres is wired today; MySQL and SQLite-via-sqlx are non-breaking future additions
 
 ## Best Fit Right Now
 
@@ -54,13 +56,13 @@ CrateStack is currently strongest for:
 3. services that benefit from generated policy checks and typed query builders
 4. CBOR-first or CBOR-aware HTTP APIs that still need JSON fallback
 5. banking-adjacent workloads that need transactional audit, optimistic locking, idempotency, and explicit isolation out of the box
-6. offline-first mobile apps that want one Rust schema definition to drive both the server and an on-device SQLite store, with Flutter (or another UI toolkit) layered on as UI only via FFI
+6. offline-first apps that want one Rust schema definition to drive the server AND an embedded SQLite store — whether on a phone (Flutter or another UI toolkit over FFI), on a desktop, or **in a browser tab** via OPFS-backed `wasm32-unknown-unknown` running inside a Dedicated Worker
 
 ## Read Next
 
 1. `../getting-started/quickstart` for a minimal setup path
 2. `./banking-readiness` for the regulated-workload primitives shipped on `feat/banking-readiness`
 3. `../guides/auth-provider` for the host auth boundary
-4. `../guides/offline-first-sqlite` for the on-device SQLite backend
+4. `../guides/offline-first-sqlite` for the embedded SQLite backend (native + browser via OPFS)
 5. `../architecture/transport-architecture` for transport design
 6. `../reference/auth-support-matrix` for the current auth and policy surface
