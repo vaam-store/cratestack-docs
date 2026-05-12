@@ -29,6 +29,8 @@ CrateStack already provides a usable Rust-first backend slice, but it is not yet
 18. runtime validators (`@length`, `@range` on Int + Decimal, `@email`, `@regex`, `@uri`, `@iso4217`) with PII-safe error messages
 19. Decimal scalar with selectable backend (`rust_decimal` or `bigdecimal`)
 20. FIPS-validated TLS provider toggle via the `crypto-aws-lc-rs` workspace feature
+21. on-device SQLite backend via `cratestack-rusqlite`: sync API, bundled SQLite, the same `include_schema!`-driven `ModelDelegate` shape as the server, with `Decimal`, `Uuid`, `DateTime`, and `Json` round-tripping exactly through canonical TEXT storage; intended for offline-first mobile apps that bridge to UI toolkits like Flutter over FFI
+22. dialect-agnostic SQL primitives crate `cratestack-sql` shared by both backends — value types, filter AST, order AST, model descriptor, and a narrow `Dialect` trait that only varies on placeholder syntax
 
 ## Still Narrow Or Deferred
 
@@ -40,6 +42,8 @@ CrateStack already provides a usable Rust-first backend slice, but it is not yet
 6. the client runtime remains partially spiked rather than fully mature
 7. the shipped rate-limit store is in-memory (single-replica); the trait is pluggable
 8. the migration runner is forward-only — schema-diff generation and zero-downtime coordination remain out of scope
+9. the on-device SQLite backend does **not** enforce `@@allow` / `@@deny` policies at SQL render time (by design — the device is single-user; authorization is the app's concern there)
+10. the umbrella `cratestack` crate compiles both backends unconditionally; binary-size feature gating to opt out of the sqlx/tokio stack on mobile-only builds is planned but not yet shipped
 
 ## Best Fit Right Now
 
@@ -50,11 +54,13 @@ CrateStack is currently strongest for:
 3. services that benefit from generated policy checks and typed query builders
 4. CBOR-first or CBOR-aware HTTP APIs that still need JSON fallback
 5. banking-adjacent workloads that need transactional audit, optimistic locking, idempotency, and explicit isolation out of the box
+6. offline-first mobile apps that want one Rust schema definition to drive both the server and an on-device SQLite store, with Flutter (or another UI toolkit) layered on as UI only via FFI
 
 ## Read Next
 
 1. `../getting-started/quickstart` for a minimal setup path
 2. `./banking-readiness` for the regulated-workload primitives shipped on `feat/banking-readiness`
 3. `../guides/auth-provider` for the host auth boundary
-4. `../architecture/transport-architecture` for transport design
-5. `../reference/auth-support-matrix` for the current auth and policy surface
+4. `../guides/offline-first-sqlite` for the on-device SQLite backend
+5. `../architecture/transport-architecture` for transport design
+6. `../reference/auth-support-matrix` for the current auth and policy surface

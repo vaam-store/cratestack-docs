@@ -94,3 +94,4 @@ let app = axum::Router::new().nest(
 1. `../guides/auth-provider` for the host auth boundary
 2. `../architecture/transport-architecture` for codec, framing, and envelope rules
 3. `../overview/banking-readiness` for the regulated-workload primitives
+4. `../guides/offline-first-sqlite` if you want to run the same schema **on-device** against a local SQLite database — same `.cstack` file, sync API, no tokio, designed for Flutter-over-FFI mobile apps
