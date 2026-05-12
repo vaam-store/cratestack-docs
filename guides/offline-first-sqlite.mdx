@@ -1,0 +1,203 @@
+---
+title: Offline-First with SQLite
+description: Run the same .cstack schema on-device through cratestack-rusqlite for offline-first mobile and embedded apps over FFI.
+---
+
+# Offline-First with SQLite
+
+CrateStack's on-device backend, `cratestack-rusqlite`, runs the same `.cstack` schemas you use on the server, against a local SQLite database, with a synchronous API designed to cross the FFI boundary into Flutter (or any other UI toolkit) cleanly.
+
+<Info>
+This guide is for the **"Rust as real frontend, UI as UI-only"** architecture: Rust owns state, persistence, and business logic on the device; the UI toolkit talks to Rust over FFI. The same `.cstack` schema definition compiles to both the server (Postgres via `cratestack-sqlx`) and the device (SQLite via `cratestack-rusqlite`).
+</Info>
+
+## What Changes on Device
+
+| Aspect | Server (`cratestack-sqlx`) | Device (`cratestack-rusqlite`) |
+| --- | --- | --- |
+| API style | `async`, tokio runtime | **sync**, no tokio |
+| Database | Postgres pool (`sqlx::PgPool`) | single `rusqlite::Connection` behind a `Mutex` |
+| SQLite build | n/a | **bundled** — works on iOS and Android out of the box |
+| Policy enforcement | full — `@@allow` / `@@deny` rendered into `WHERE` | **none** — device is single-user; authorization is the app's concern |
+| Idempotency, audit, isolation, migrations | available | not applicable (or app-owned) |
+| `RETURNING` on writes | yes | yes (SQLite ≥ 3.35) |
+| `Decimal` round-trip | exact | exact (stored as canonical TEXT) |
+
+The shared dialect-agnostic primitives (filter AST, order AST, value types, `ModelDescriptor`) live in `cratestack-sql` — both backends consume them.
+
+## Add the Dependency
+
+The umbrella `cratestack` crate already re-exports the SQLite backend types you need, so no extra dependency is required. Just enable the feature surface you already use:
+
+```toml
+[dependencies]
+cratestack = { version = "0.1", features = ["decimal-rust-decimal"] }
+```
+
+For a binary-size-sensitive mobile build that doesn't need the server stack, depend directly on the leaf crates:
+
+```toml
+[dependencies]
+cratestack-rusqlite = "0.1"
+cratestack-sql = "0.1"
+```
+
+## Schema
+
+Use `provider = "sqlite"` on the `datasource` block. Everything else in your `.cstack` schema works the same:
+
+```cstack
+datasource db {
+  provider = "sqlite"
+  url = env("DATABASE_URL")
+}
+
+auth Anonymous {
+  id Int
+}
+
+model Note {
+  id Uuid @id
+  title String
+  body String
+  pinned Boolean
+  createdAt DateTime
+}
+```
+
+<Note>
+The on-device runtime ignores `auth` blocks and `@@allow` / `@@deny` policies at SQL render time. They still parse and validate; they just don't gate reads or writes. Declare them as if you were on the server — your schema stays portable.
+</Note>
+
+## Minimal Setup
+
+```rust
+use cratestack::include_schema;
+use cratestack::{RusqliteRuntime, rusqlite_backend::ddl::create_table_sql};
+use cratestack_rusqlite::ModelDelegate;
+
+include_schema!("schema.cstack");
+
+fn open_store() -> Result<RusqliteRuntime, Box<dyn std::error::Error>> {
+    // On a real device, resolve a writable path your platform considers
+    // persistent: `Application.documentsDirectory` on iOS,
+    // `Context.getFilesDir()` on Android.
+    let runtime = RusqliteRuntime::open("app.db")?;
+
+    // Bootstrap each table the schema defines. Idempotent — runs every
+    // app start.
+    runtime.with_connection(|conn| {
+        conn.execute_batch(&create_table_sql(&cratestack_schema::NOTE_MODEL))?;
+        Ok(())
+    })?;
+
+    Ok(runtime)
+}
+
+fn insert_one(runtime: &RusqliteRuntime) -> Result<(), Box<dyn std::error::Error>> {
+    let notes = ModelDelegate::new(runtime, &cratestack_schema::NOTE_MODEL);
+    let created = notes
+        .create(cratestack_schema::CreateNoteInput {
+            id: uuid::Uuid::new_v4(),
+            title: "First note".into(),
+            body: "Hello.".into(),
+            pinned: true,
+            createdAt: chrono::Utc::now(),
+        })
+        .run()?;
+    println!("created note {}", created.id);
+    Ok(())
+}
+```
+
+## Filtering, Ordering, Paging
+
+The fluent delegate API mirrors the server side. Field accessors are emitted by `include_schema!` per model:
+
+```rust
+let pinned_first = notes
+    .find_many()
+    .where_(cratestack_schema::note::pinned().is_true())
+    .order_by(cratestack_schema::note::createdAt().desc())
+    .limit(20)
+    .run()?;
+```
+
+`where_expr`, `and`, `or`, and relation filters from `cratestack-sql` all work here.
+
+## Storage Class Choices
+
+Mobile apps live or die by data fidelity, so the binding layer commits to canonical representations rather than relying on SQLite's loose typing:
+
+| `SqlValue` variant | Stored as | Notes |
+| --- | --- | --- |
+| `String`, `Cuid` | TEXT | as-is |
+| `Int` | INTEGER | |
+| `Float` | REAL | |
+| `Bool` | INTEGER (0/1) | decoder coerces back to `bool` |
+| `Bytes` | BLOB | |
+| `Uuid` | TEXT | canonical hyphenated lowercase form |
+| `DateTime<Utc>` | TEXT | RFC 3339 UTC, microsecond precision |
+| `Json` | TEXT | compact serde JSON |
+| `Decimal` | TEXT | canonical string — **exact precision**, no float coercion |
+
+The DDL generator declares every column with `BLOB` affinity to preserve those storage classes. TEXT or NUMERIC affinities would silently convert numeric-looking text and lose Decimal precision; BLOB is the only affinity that respects what you bind.
+
+<Warning>
+Because columns use BLOB affinity, integer primary keys do **not** alias the SQLite rowid. Production schemas typically use UUID PKs anyway. If you specifically need auto-increment, apply your own `CREATE TABLE` statement via `RusqliteRuntime::with_connection` instead of the generic DDL helper.
+</Warning>
+
+## Soft Delete and Audit
+
+`@@soft_delete` works on device: `DELETE` calls become `UPDATE` of the soft-delete column, and every `find_*` automatically filters rows where the soft-delete column is non-null. `@@audit` is **not** wired on device — the audit log is a server-side compliance feature.
+
+## The FFI Boundary
+
+The on-device runtime is sync, so it slots into FFI bridges (e.g. `flutter_rust_bridge`) without an async runtime to drag along. The boundary helpers in `cratestack_rusqlite::ffi` give you a small envelope to encode requests and responses across the language gap:
+
+```rust
+use cratestack_rusqlite::ffi::{
+    OperationRequest, OperationResponse, json_request_from, json_response_into,
+};
+
+// In your cdylib entry point:
+fn ffi_call(runtime: &cratestack::RusqliteRuntime, bytes: &[u8]) -> Vec<u8> {
+    let request = match json_request_from(bytes) {
+        Ok(req) => req,
+        Err(err) => return json_response_into(
+            &OperationResponse::err("bad_request", err.to_string()),
+        ),
+    };
+    json_response_into(&dispatch(runtime, request))
+}
+```
+
+The `dispatch(...)` function lives in your app crate — it knows the specific model types and routes each `(model, kind)` pair to the right delegate call. See `cargo run --example sqlite_ffi_dispatch -p cratestack` in the framework repository for a complete template.
+
+## Examples in the Framework Repo
+
+Three runnable examples, ordered by complexity:
+
+1. **`sqlite_quickstart`** — smallest working program: open in-memory DB, bootstrap one table, CRUD a row.
+2. **`sqlite_offline_first`** — file-backed DB, two models, `Decimal` money preserved exactly, filtering and partial updates.
+3. **`sqlite_ffi_dispatch`** — the JSON-bytes FFI dispatcher you'd wrap with `flutter_rust_bridge`.
+
+Run any of them with `cargo run --example <name> -p cratestack`.
+
+## Limits Today
+
+The on-device backend is intentionally focused. The following are **not** implemented and are unlikely to be in v1:
+
+- policy enforcement at the storage layer (this is by design — see above)
+- transactional audit log
+- idempotency middleware (HTTP-layer concept; on device the app already controls retries)
+- generated HTTP routes (no transport on device)
+- richer migration tooling (apps typically use `CREATE TABLE IF NOT EXISTS` + ad-hoc `ALTER TABLE` migrations)
+
+Both backends are currently compiled into the umbrella `cratestack` crate unconditionally. A future refinement will add feature gates so size-sensitive mobile builds can opt out of the sqlx/tokio stack — at which point `cratestack-rusqlite` will be usable as a leaf dependency with zero server-side weight. Today it is **already** usable that way; the umbrella just isn't gated yet.
+
+## Read Next
+
+1. [Field Attributes](/reference/field-attributes) for the schema surface available on both backends
+2. [Scalars](/reference/scalars) including the `Decimal` precision contract that round-trips through SQLite TEXT storage
+3. [Quickstart](/getting-started/quickstart) for the server-side path

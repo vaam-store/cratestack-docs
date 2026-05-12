@@ -37,7 +37,8 @@
         "group": "Guides",
         "pages": [
           "guides/telemetry",
-          "guides/validators"
+          "guides/validators",
+          "guides/offline-first-sqlite"
         ]
       },
       {
