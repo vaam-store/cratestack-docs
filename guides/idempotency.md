@@ -1,6 +1,6 @@
 ---
 title: Idempotency
-description: Duplicate-execution protection for mutating routes using the `IdempotencyLayer` and a Postgres-backed reservation store.
+description: Duplicate-execution protection for mutating routes using the `IdempotencyLayer` and a pluggable reservation store (Postgres or Redis).
 ---
 
 # Idempotency
@@ -12,6 +12,11 @@ reserving `(principal, key)` before the handler runs and replaying the
 captured response for any subsequent request with the same key.
 
 ## Wiring
+
+Pick the backend that fits your deployment. The trait is the same; the
+layer doesn't care which store backs it.
+
+### Postgres (`cratestack-sqlx`)
 
 ```rust
 use cratestack_axum::idempotency::IdempotencyLayer;
@@ -25,6 +30,41 @@ store.ensure_schema().await?;
 let router = cratestack_schema::axum::router(db, procedures, JsonCodec, auth)
     .layer(IdempotencyLayer::new(store, Duration::from_secs(24 * 3600)));
 ```
+
+### Redis (`cratestack-redis`)
+
+```rust
+use cratestack_axum::idempotency::IdempotencyLayer;
+use cratestack_redis::RedisIdempotencyStore;
+use std::sync::Arc;
+use std::time::Duration;
+
+let store = Arc::new(RedisIdempotencyStore::open(
+    "redis://127.0.0.1/",
+    "bank:prod", // key prefix; the store appends `:idem:<sha256(...)>`
+)?);
+
+let router = cratestack_schema::axum::router(db, procedures, JsonCodec, auth)
+    .layer(IdempotencyLayer::new(store, Duration::from_secs(24 * 3600)));
+```
+
+Redis is the right choice when:
+
+1. you already operate a Redis cluster for sessions / caching and don't
+   want a second durable store
+2. you want eviction handled by the data store — Redis drops keys on TTL,
+   no `garbage_collect()` sweep needed
+3. your idempotency window is short (minutes to hours) so durability vs
+   Postgres matters less than the operational simplicity
+
+Postgres remains the right choice when:
+
+1. you already run Postgres for the application data and want one
+   transactional system of record
+2. you need the idempotency rows for forensic reconstruction beyond their
+   TTL, or want them to participate in logical replication
+3. you care about transactional consistency between the idempotency row
+   and other writes the handler does
 
 The TTL is a hard upper bound on how long an in-flight reservation pins a
 key. Banks running long-tail async workflows pick 24 h; consumer-facing
@@ -78,7 +118,12 @@ Every reservation carries a UUID `reservation_id`. `complete` and `release`
 require a matching token, so a handler that runs past the TTL and has its
 row reclaimed by a retry cannot poison the newer reservation. The classical
 TTL-overrun scenario degrades to a silent no-op rather than a wrong-response
-write.
+write. This guarantee holds in both the Postgres and Redis stores.
+
+The Redis store additionally guards `release` on `status == 'in_flight'`
+(matching the Postgres store's `AND response_body IS NULL` clause), so a
+spurious `release` arriving after `complete` is also a no-op rather than
+wiping the captured response.
 
 ## Principal scoping
 
@@ -96,8 +141,10 @@ IdempotencyLayer::new(store, ttl)
 
 ## Persistence
 
-The store ships an `ensure_schema()` helper that idempotently creates the
-table and index. The DDL is:
+### Postgres layout
+
+`SqlxIdempotencyStore` ships an `ensure_schema()` helper that idempotently
+creates the table and index. The DDL is:
 
 ```sql
 CREATE TABLE cratestack_idempotency (
@@ -118,23 +165,53 @@ CREATE TABLE cratestack_idempotency (
 has passed. Banks call it from a scheduled task; the request path takes
 over a single expired row on demand but doesn't sweep.
 
+### Redis layout
+
+`RedisIdempotencyStore` writes one Redis hash per `(principal, key)` at:
+
+```text
+<prefix>:idem:<sha256(principal || 0x00 || key)>
+```
+
+Hashing both sides keeps the Redis key bounded regardless of how long the
+principal fingerprint or idempotency key grows, and avoids any escaping
+concerns around `:` in user-supplied values. Hash fields hold the
+request hash, status, reservation token, captured response bytes, and
+timestamps — all as raw bytes (Redis hash values are binary-safe; no
+base64 wrapping is needed).
+
+Atomicity comes from three small Lua scripts: `reserve_or_fetch`,
+`complete`, and `release`. They run via `EVALSHA` with a `NOSCRIPT`
+fallback, so the script body is loaded into the Redis server once per
+instance and reused across requests.
+
+Eviction is driven by `PEXPIREAT` — there is no separate GC. When the
+TTL passes, Redis drops the hash; the next reservation observes a
+missing key and claims a fresh slot. A late `complete` or `release`
+from the previous reservation finds a rotated token and becomes a
+silent no-op.
+
 ## Custom stores
 
 The `IdempotencyStore` trait is async + dyn-compatible. Banks running
-multi-region deployments back the trait with their own store (typically a
-Postgres replica with logical replication, or a globally-consistent
-key-value store) so the reservation guarantee holds across regions.
+multi-region deployments can plug in their own backing store — typically
+a Postgres replica with logical replication, a globally-consistent
+key-value store, or a Redis Enterprise CRDT cluster — so the reservation
+guarantee holds across regions.
 
 ## Caveats
 
-The single-Postgres store enforces the reservation guarantee within one
-database. Banks running active-active multi-region clusters must either:
+The shipped Postgres and Redis stores enforce the reservation guarantee
+within one database instance (or Redis primary). Banks running
+active-active multi-region clusters must either:
 
 1. accept that retries hitting a different region within the TTL race the
    reservation, or
 2. plug a globally-coordinated store into `IdempotencyStore` and bring
    that consensus layer's latency budget into the request path.
 
-The shipped store also assumes a single logical service per
-`principal_fingerprint`. Services that share a database between unrelated
-applications should namespace the key in the fingerprint function.
+Both shipped stores assume a single logical service per
+`principal_fingerprint`. Services that share a backing store between
+unrelated applications should namespace the key in the fingerprint
+function — and, for Redis, choose a per-application `key_prefix` so
+deployments can't trample each other's keys.

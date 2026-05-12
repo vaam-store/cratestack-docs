@@ -1550,6 +1550,29 @@ tracing = "0.1"
 
 ---
 
+## 16.4.1 `cratestack-redis`
+
+Required:
+
+```toml
+redis = { version = "1", features = ["aio", "tokio-comp", "script"] }
+async-trait = "0.1"
+sha2 = "0.10"
+uuid = { version = "1", features = ["v4"] }
+cratestack-axum = { path = "../cratestack-axum" }
+cratestack-core = { path = "../cratestack-core" }
+```
+
+Notes:
+
+Sibling crate to `cratestack-sqlx` on the server side: ships
+`RedisIdempotencyStore`, the Redis-backed `IdempotencyStore` impl used
+by `IdempotencyLayer`. Lua scripts handle atomicity; `PEXPIREAT` handles
+eviction. Distinct from the client-side `cratestack-client-store-redis`,
+which implements `ClientStateStore` and is independent of this crate.
+
+---
+
 ## 16.5 `cratestack-axum`
 
 Required:
@@ -1905,6 +1928,7 @@ The first repo implementation slice makes these choices explicit:
 31. Richer policy parsing, broker/webhook fan-out, stronger event-delivery guarantees beyond the current transactional outbox plus in-process drain loop, and broader procedure runtime features are still deferred.
 32. `cargo-deny` configuration is checked in at `cratestack/deny.toml` as part of the release-oriented workspace bootstrap.
 33. Generated telemetry now uses direct `tracing` spans/events for procedure authorization and invocation, generated procedure routes, and generated model list routes, while subscriber setup, filtering, and any exporter integration remain host-owned concerns.
+34. A new server-side `cratestack-redis` crate now provides `RedisIdempotencyStore`, a Redis-backed implementation of `cratestack_axum::idempotency::IdempotencyStore`. It writes one Redis hash per `(principal, key)` under `<prefix>:idem:<sha256(principal || 0x00 || key)>`, drives atomicity through three Lua scripts (`reserve_or_fetch`, `complete`, `release`) invoked via `EVALSHA` with a `NOSCRIPT` fallback, and uses `PEXPIREAT` for eviction instead of a separate GC sweep. The crate is a sibling to `cratestack-sqlx` — the client-side `cratestack-client-store-redis` keeps its existing scope (Redis-backed `ClientStateStore` for the generated Rust client's request journal) and is unrelated to this server-side store.
 
 ---
 

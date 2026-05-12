@@ -19,7 +19,7 @@ CrateStack already provides a usable Rust-first backend slice, but it is not yet
 8. policy enforcement for the current supported model and procedure policy subset
 9. generated telemetry for procedure wrappers, procedure routes, and model list routes
 10. top-level `mixin` declarations plus model `@use(...)` expansion for reusable field sets
-11. duplicate-execution protection via `IdempotencyLayer` + `SqlxIdempotencyStore` with reservation tokens and header replay
+11. duplicate-execution protection via `IdempotencyLayer` with reservation tokens and header replay, backed by either `SqlxIdempotencyStore` (Postgres) or `RedisIdempotencyStore` (Redis, via `cratestack-redis`)
 12. optimistic concurrency via `@version` with `If-Match` / `ETag` round-tripping
 13. transactional audit log via `@@audit` + `cratestack_audit` + pluggable `AuditSink`
 14. explicit transaction isolation via `run_in_isolated_tx` + procedure `@isolation`, with commit-time retry

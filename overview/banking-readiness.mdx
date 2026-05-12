@@ -14,7 +14,7 @@ the guarantees.
 
 The current banking-grade slice covers:
 
-1. duplicate-execution protection via `IdempotencyLayer` + `SqlxIdempotencyStore`
+1. duplicate-execution protection via `IdempotencyLayer` backed by `SqlxIdempotencyStore` (Postgres) or `RedisIdempotencyStore` (Redis)
 2. optimistic concurrency via `@version` + `If-Match` / `ETag` round-tripping
 3. transactional audit log via `@@audit` + `cratestack_audit` + pluggable `AuditSink`
 4. explicit transaction isolation via `run_in_isolated_tx` + `@isolation`
@@ -31,7 +31,7 @@ The track stops short of:
 
 1. zero-downtime migration generation from schema diffs
 2. cluster-wide rate limiting (the shipped store is in-memory; the trait is pluggable)
-3. cluster-wide idempotency replication (PG is the single source of truth)
+3. cluster-wide idempotency replication (the chosen store — Postgres primary or Redis primary — is the single source of truth; multi-region active-active needs a coordinated store plugged into the trait)
 4. signed audit chains / immutable WORM storage
 5. field-level read masking or write blocking — model-level only
 6. an HSM-backed signing or key-management abstraction
