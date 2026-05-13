@@ -153,7 +153,7 @@ Each procedure should expose:
 
 ## Where It Should Come From
 
-Prefer generated metadata from the same `include_schema!` path that already creates:
+Prefer generated metadata from the same `include_server_schema!` path that already creates:
 
 1. model descriptors
 2. route metadata

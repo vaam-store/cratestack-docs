@@ -2,11 +2,11 @@
 
 ## Status
 
-Accepted for the initial workspace bootstrap. Some crates remain intentionally deferred until after the parser, macro, and codec spine is stable.
+Accepted for the initial workspace bootstrap. **Updated 0.3.0** — `cratestack-sqlx` now depends on `sqlx-core` + `sqlx-postgres` directly instead of the umbrella `sqlx` crate (the umbrella's `sqlx-sqlite` optional dep was leaking into the resolve graph and conflicting with `rusqlite 0.39`'s `libsqlite3-sys 0.37`). `cratestack-lsp` migrated from the unmaintained `tower-lsp 0.20` to the active community fork `tower-lsp-server 0.23`. `cratestack-sqlite-wasm` was deleted — `rusqlite 0.39` transparently targets `wasm32-unknown-unknown` via `sqlite-wasm-rs`, so `cratestack-rusqlite` now serves all three deployment targets (mobile native, desktop, browser via OPFS) from one source.
 
 ## Date
 
-2026-04-26
+2026-04-26 (initial). 0.3.0 update: 2026-05-12.
 
 ## Scope
 
@@ -1370,7 +1370,7 @@ Purpose:
 Used by:
 
 * integration tests
-* `cratestack-client-rust`, which backs generated Rust clients emitted by `include_schema!` and client-only generated clients emitted by `include_client_macro!`
+* `cratestack-client-rust`, which backs generated Rust clients emitted by `include_server_schema!` and client-only generated clients emitted by `include_client_schema!` (renamed from `include_client_macro!` in 0.3.0)
 
 Recommended dependency:
 

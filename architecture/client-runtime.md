@@ -573,7 +573,7 @@ Deferred from the spike:
 
 ## Current implementation note
 
-The current `cratestack-client-dart` crate should be treated as an experimental runtime-oriented and bridge-facing slice. It no longer owns Dio directly, renders through repo-managed templates that callers can override, and still uses generic value graphs for typed model conversion while the Rust-owned bridge and codec story continues to mature. The generated Dart APIs now expose canonical projection query options plus selection builders and projection wrappers for projected reads. On the Rust side, `cratestack-client-rust` now exposes additive request-authorizer hooks and a generated schema-native client facade over the same runtime. `include_schema!` emits that facade alongside server/database code; `include_client_macro!` emits only client-facing Rust types, inputs, selection builders, procedure payloads, and the reqwest-backed facade for callers that only need to talk to another CrateStack HTTP service. Selection-aware response typing is still intentionally incomplete overall, so callers should treat these projections as a contract-aligned safety improvement rather than assuming every narrowed selection is perfectly type-level exact. Runtime state persistence is provided through the base in-memory and JSON-file stores, plus opt-in SQLite and Redis store crates.
+The current `cratestack-client-dart` crate should be treated as an experimental runtime-oriented and bridge-facing slice. It no longer owns Dio directly, renders through repo-managed templates that callers can override, and still uses generic value graphs for typed model conversion while the Rust-owned bridge and codec story continues to mature. The generated Dart APIs now expose canonical projection query options plus selection builders and projection wrappers for projected reads. On the Rust side, `cratestack-client-rust` now exposes additive request-authorizer hooks and a generated schema-native client facade over the same runtime. `include_server_schema!` emits that facade alongside server/database code; `include_client_schema!` (renamed from `include_client_macro!` in 0.3.0) emits only client-facing Rust types, inputs, selection builders, procedure payloads, and the reqwest-backed facade for callers that only need to talk to another CrateStack HTTP service. Selection-aware response typing is still intentionally incomplete overall, so callers should treat these projections as a contract-aligned safety improvement rather than assuming every narrowed selection is perfectly type-level exact. Runtime state persistence is provided through the base in-memory and JSON-file stores, plus opt-in SQLite and Redis store crates.
 
 ## Examples
 
@@ -599,13 +599,13 @@ let config = RuntimeConfigWire {
 
 ### Rust Client-Only Schema
 
-Backend-to-backend callers should prefer `include_client_macro!` when they consume another service's `.cstack` schema but do not own its database, routes, policies, procedure registry, custom-field resolvers, or event subscriptions. CBOR should be the default backend-to-backend codec; JSON is for debugging, tests, and compatibility paths unless a service explicitly documents otherwise.
+Backend-to-backend callers should prefer `include_client_schema!` when they consume another service's `.cstack` schema but do not own its database, routes, policies, procedure registry, custom-field resolvers, or event subscriptions. CBOR should be the default backend-to-backend codec; JSON is for debugging, tests, and compatibility paths unless a service explicitly documents otherwise.
 
 ```rust
-use cratestack::include_client_macro;
+use cratestack::include_client_schema;
 use cratestack::client_rust::{CborCodec, ClientConfig, CratestackClient};
 
-include_client_macro!("../payment-gateway/schema/payment.cstack");
+include_client_schema!("../payment-gateway/schema/payment.cstack");
 
 let base_url = url::Url::parse("http://payment-gateway:3000")?;
 let runtime = CratestackClient::new(ClientConfig::new(base_url), CborCodec);

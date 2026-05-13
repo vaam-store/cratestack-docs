@@ -2,11 +2,21 @@
 
 ## Status
 
-Proposed
+Proposed (initial). **Updated in 0.3.0** — see "0.3.0 macro-split update" below.
 
 ## Date
 
-2026-04-26
+2026-04-26 (initial). 0.3.0 update: 2026-05-12.
+
+## 0.3.0 macro-split update
+
+The original ADR proposed a single `include_schema!` macro emitting both server (sqlx) and embedded (rusqlite) `FromRow` impls on every model. Practice showed this dragged unwanted transitive deps into every consumer (mobile apps pulled sqlx for nothing, server pulled rusqlite for nothing). 0.3.0 replaces it with **three role-specific macros**, each emitting only its target backend:
+
+- `include_server_schema!("schema.cstack", db = Postgres)` — sqlx + axum + procedures + events
+- `include_embedded_schema!("schema.cstack")` — rusqlite only; native AND `wasm32-unknown-unknown` via OPFS
+- `include_client_schema!("schema.cstack")` — HTTP client stubs only (renamed from `include_client_macro!`)
+
+The split is strict: server emit never references rusqlite, embedded emit never references sqlx. The rest of this ADR's reasoning (single schema, generated delegates, host-owned auth, etc.) remains intact — the macro split is an implementation refinement, not a directional change. Code examples below use the original `include_schema!` for historical accuracy; in 0.3.0 those become `include_server_schema!(..., db = Postgres)` for server contexts.
 
 ## Context
 

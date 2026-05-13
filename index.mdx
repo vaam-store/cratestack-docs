@@ -1,14 +1,14 @@
 ---
 title: CrateStack
-description: Build typed services from one schema — server-side Postgres or on-device SQLite — with generated delegates, routes, policy checks, and clients.
+description: Build typed services from one schema — server-side Postgres, embedded SQLite (mobile, desktop, browser-via-OPFS), or HTTP client — with generated delegates, routes, policy checks, and clients.
 ---
 
 # CrateStack
 
-CrateStack is a schema-first Rust framework that turns one `.cstack` file into a typed server **and** a typed on-device storage layer. Write the schema once; get Postgres-backed delegates, Axum routes, and policy-aware behavior on the server, and a sync SQLite-backed delegate suitable for offline-first mobile-over-FFI apps on the device — without rebuilding either side by hand.
+CrateStack is a schema-first Rust framework that turns one `.cstack` file into typed runtimes for three deployment shapes: a Postgres-backed server, an embedded SQLite ORM that works on mobile, desktop, **and browsers via OPFS**, and a HTTP client. One schema in, three role-specific macros out — each emits only what its target needs, no transitive sqlx in mobile builds, no rusqlite in server builds.
 
 <Info>
-Define your service once in `.cstack`, then generate typed SQLx-backed delegates, Axum routes, policy-aware server behavior, Rust or Dart client surfaces — and, for offline-first apps, a synchronous SQLite-backed delegate via `cratestack-rusqlite` that runs on-device with no tokio runtime.
+Define your service once in `.cstack`, then pick a macro: `include_server_schema!` for sqlx-backed Postgres servers, `include_embedded_schema!` for offline-capable apps (native sync, browser async via OPFS), or `include_client_schema!` for thin HTTP clients. Each emits a `cratestack_schema` module shaped for that one role.
 </Info>
 
 <Columns cols={2}>
@@ -24,8 +24,8 @@ Define your service once in `.cstack`, then generate typed SQLx-backed delegates
   <Card title="Read the transport model" href="/architecture/transport-architecture">
     Learn how CrateStack thinks about codecs, route generation, client boundaries, and future transport seams.
   </Card>
-  <Card title="Run the schema on-device" href="/guides/offline-first-sqlite">
-    Use the same `.cstack` schema against a local SQLite database — sync API, bundled SQLite, ready for Flutter-over-FFI mobile apps.
+  <Card title="Run the schema embedded" href="/guides/offline-first-sqlite">
+    Use the same `.cstack` schema against a local SQLite database — sync on mobile/desktop, persistent OPFS in the browser via `wasm32-unknown-unknown`.
   </Card>
 </Columns>
 
@@ -51,27 +51,27 @@ CrateStack is built for teams that want framework leverage without giving up Rus
   <Step title="Define the contract">
     Model your auth principal, shared mixins, models, and policies in a `.cstack` file.
   </Step>
-  <Step title="Compile the runtime">
-    Use `include_schema!` to validate the schema at compile time and generate the `cratestack_schema` module.
+  <Step title="Pick your macro">
+    Use `include_server_schema!("…", db = Postgres)` for the server, `include_embedded_schema!` for embedded ORM, or `include_client_schema!` for HTTP-only clients. Each validates the schema at compile time and emits a `cratestack_schema` module shaped for that role.
   </Step>
-  <Step title="Wire your database and host auth">
-    Build the generated runtime with a PostgreSQL pool and bind your application auth through the host-owned provider boundary.
+  <Step title="Wire your runtime">
+    Server: build with a `sqlx::PgPool` and bind your application auth through the host-owned provider boundary. Embedded: open a `RusqliteRuntime` (native) or install OPFS first inside a Worker (browser). Client: construct a `CratestackClient` against the server's URL.
   </Step>
   <Step title="Choose your surface area">
-    Use the generated delegates directly, mount generated Axum routers, or do both depending on how much API surface you want exposed.
+    Use the generated delegates directly, mount generated Axum routers (server only), or do both depending on how much API surface you want exposed.
   </Step>
 </Steps>
 
 ## What You Get Today
 
-1. compile-time schema validation
-2. generated SQLx-backed model delegates (server) and rusqlite-backed delegates (on-device)
-3. generated Axum CRUD and procedure routes
-4. generated policy enforcement for the supported subset (server only — device runtime is unauthenticated by design)
+1. compile-time schema validation, split into three role-specific macros (`include_server_schema!` / `include_embedded_schema!` / `include_client_schema!`)
+2. generated SQLx-backed model delegates (server) and rusqlite-backed delegates (embedded)
+3. generated Axum CRUD and procedure routes (server)
+4. generated policy enforcement for the supported subset (server only — embedded runtime is unauthenticated by design; clients are untrusted)
 5. generated Rust and Dart client surfaces
 6. reusable schema mixins for shared field sets
 7. banking-grade primitives: idempotency, optimistic locking, transactional audit, explicit transaction isolation, soft delete, rate limiting, validators, Decimal scalar, forward-only migrations
-8. on-device SQLite backend (`cratestack-rusqlite`) — sync API, bundled SQLite, exact-precision `Decimal` round-trip, ready for Flutter-over-FFI mobile apps
+8. embedded SQLite backend (`cratestack-rusqlite`) — sync API, bundled SQLite, exact-precision `Decimal` round-trip; works on **native** (mobile, desktop) and **`wasm32-unknown-unknown`** (browser, OPFS-backed) from the same source
 
 <Warning>
 CrateStack is usable today, but the public `v0` track is narrower than the broader target architecture. COSE transport, parts of the client runtime, richer schema coverage, and some policy features are still deferred. Use [Current State](/overview/current-state) as the source of truth for adoption decisions.

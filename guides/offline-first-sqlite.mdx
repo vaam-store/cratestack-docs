@@ -1,45 +1,81 @@
 ---
-title: Offline-First with SQLite
-description: Run the same .cstack schema on-device through cratestack-rusqlite for offline-first mobile and embedded apps over FFI.
+title: Offline-First with Embedded SQLite
+description: Run the same .cstack schema embedded through cratestack-rusqlite — native sync on mobile/desktop, async OPFS-backed on browser via wasm32-unknown-unknown.
 ---
 
-# Offline-First with SQLite
+# Offline-First with Embedded SQLite
 
-CrateStack's on-device backend, `cratestack-rusqlite`, runs the same `.cstack` schemas you use on the server, against a local SQLite database, with a synchronous API designed to cross the FFI boundary into Flutter (or any other UI toolkit) cleanly.
+CrateStack's embedded backend, `cratestack-rusqlite`, runs the same `.cstack` schemas you use on the server against a local SQLite database. As of 0.3.0 it ships from **one source** to three deployment targets:
+
+- **Native mobile** (iOS, Android via FFI / `flutter_rust_bridge`)
+- **Native desktop** (Windows, macOS, Linux)
+- **Browser** via `wasm32-unknown-unknown` with **OPFS-backed persistence**
+
+The same `RusqliteRuntime`, the same delegate API, the same `.cstack` schema — only the FFI backend swaps per target (`libsqlite3-sys` on native, `sqlite-wasm-rs` on wasm32). This is handled transparently by `rusqlite 0.39`.
 
 <Info>
-This guide is for the **"Rust as real frontend, UI as UI-only"** architecture: Rust owns state, persistence, and business logic on the device; the UI toolkit talks to Rust over FFI. The same `.cstack` schema definition compiles to both the server (Postgres via `cratestack-sqlx`) and the device (SQLite via `cratestack-rusqlite`).
+The architecture is **"Rust as real frontend, UI as UI-only"**: Rust owns state, persistence, and business logic on the device or in the browser tab; the UI (Flutter, React, Solid…) talks to Rust over FFI or `wasm-bindgen`. The same `.cstack` schema definition compiles to both the server (Postgres via `cratestack-sqlx`) and the embedded target (SQLite via `cratestack-rusqlite`).
 </Info>
 
-## What Changes on Device
+## What Changes Per Target
 
-| Aspect | Server (`cratestack-sqlx`) | Device (`cratestack-rusqlite`) |
-| --- | --- | --- |
-| API style | `async`, tokio runtime | **sync**, no tokio |
-| Database | Postgres pool (`sqlx::PgPool`) | single `rusqlite::Connection` behind a `Mutex` |
-| SQLite build | n/a | **bundled** — works on iOS and Android out of the box |
-| Policy enforcement | full — `@@allow` / `@@deny` rendered into `WHERE` | **none** — device is single-user; authorization is the app's concern |
-| Idempotency, audit, isolation, migrations | available | not applicable (or app-owned) |
-| `RETURNING` on writes | yes | yes (SQLite ≥ 3.35) |
-| `Decimal` round-trip | exact | exact (stored as canonical TEXT) |
+| Aspect                 | Server (`cratestack-sqlx`)         | Embedded native (`cratestack-rusqlite`)   | Embedded browser (`cratestack-rusqlite`, wasm32) |
+| ---                    | ---                                | ---                                       | ---                                              |
+| API style              | `async`, tokio                     | **sync**, no tokio                        | **sync** SQL ops, with one **`async`** init step |
+| Storage handle         | `sqlx::PgPool`                     | `rusqlite::Connection` behind a `Mutex`   | `rusqlite::Connection` behind a `Mutex`          |
+| Persistence            | server-managed Postgres            | bundled SQLite to a file on disk          | **OPFS** (Origin Private File System) via SAH pool |
+| Build prereq           | `cargo build`                      | `cargo build`                             | `cargo build --target wasm32-unknown-unknown` + wasm-capable clang (`brew install llvm`) |
+| Worker requirement     | n/a                                | n/a                                       | **Dedicated Worker only** (OPFS `SyncAccessHandle` is worker-only) |
+| Policy enforcement     | full — rendered into `WHERE`       | **none** — client is single-user          | **none** — client is untrusted                   |
+| `RETURNING` on writes  | yes                                | yes (SQLite ≥ 3.35)                       | yes                                              |
+| `Decimal` round-trip   | exact                              | exact (canonical TEXT)                    | exact (canonical TEXT)                           |
 
-The shared dialect-agnostic primitives (filter AST, order AST, value types, `ModelDescriptor`) live in `cratestack-sql` — both backends consume them.
+The shared dialect-agnostic primitives (filter AST, order AST, value types, `ModelDescriptor`) live in `cratestack-sql` — all backends consume them.
 
 ## Add the Dependency
 
-The umbrella `cratestack` crate already re-exports the SQLite backend types you need, so no extra dependency is required. Just enable the feature surface you already use:
+The umbrella `cratestack` crate already re-exports the SQLite backend types you need. For a regular native build:
 
 ```toml
 [dependencies]
-cratestack = { version = "0.1", features = ["decimal-rust-decimal"] }
+cratestack = { version = "0.3", features = ["decimal-rust-decimal"] }
 ```
 
-For a binary-size-sensitive mobile build that doesn't need the server stack, depend directly on the leaf crates:
+For a binary-size-sensitive embedded build that doesn't need the server stack, depend directly on the leaf crates:
 
 ```toml
 [dependencies]
-cratestack-rusqlite = "0.1"
-cratestack-sql = "0.1"
+cratestack-macros = "0.3"
+cratestack-rusqlite = "0.3"
+```
+
+### Browser-specific build prerequisites
+
+`sqlite-wasm-rs` (used by `rusqlite 0.39` on wasm32) compiles SQLite's C source to WebAssembly via `cc-rs`. That requires a **wasm-capable clang** on `PATH` — Apple's stock Xcode clang does **not** include the wasm32 backend.
+
+<Tabs>
+  <Tab title="macOS">
+    ```bash
+    brew install llvm
+    export CC=/opt/homebrew/opt/llvm/bin/clang   # Apple Silicon
+    # export CC=/usr/local/opt/llvm/bin/clang    # Intel
+    ```
+  </Tab>
+  <Tab title="Linux">
+    ```bash
+    sudo apt-get install clang lld   # Clang 14+
+    ```
+  </Tab>
+  <Tab title="Emscripten">
+    Install the [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html) and point `CC` at `emcc`.
+  </Tab>
+</Tabs>
+
+Then:
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo build -p cratestack-rusqlite --target wasm32-unknown-unknown
 ```
 
 ## Schema
@@ -66,17 +102,17 @@ model Note {
 ```
 
 <Note>
-The on-device runtime ignores `auth` blocks and `@@allow` / `@@deny` policies at SQL render time. They still parse and validate; they just don't gate reads or writes. Declare them as if you were on the server — your schema stays portable.
+The embedded runtime ignores `auth` blocks and `@@allow` / `@@deny` policies at SQL render time. They still parse and validate; they just don't gate reads or writes. Declare them as if you were on the server — your schema stays portable.
 </Note>
 
-## Minimal Setup
+## Minimal Setup — Native
 
 ```rust
-use cratestack::include_schema;
+use cratestack::include_embedded_schema;
 use cratestack::{RusqliteRuntime, rusqlite_backend::ddl::create_table_sql};
 use cratestack_rusqlite::ModelDelegate;
 
-include_schema!("schema.cstack");
+include_embedded_schema!("schema.cstack");
 
 fn open_store() -> Result<RusqliteRuntime, Box<dyn std::error::Error>> {
     // On a real device, resolve a writable path your platform considers
@@ -110,9 +146,40 @@ fn insert_one(runtime: &RusqliteRuntime) -> Result<(), Box<dyn std::error::Error
 }
 ```
 
+## Minimal Setup — Browser (OPFS)
+
+OPFS `SyncAccessHandle` is **only available inside a Dedicated Worker** per the W3C spec. Install the VFS once inside the worker before opening the database; subsequent `RusqliteRuntime::open(filename)` calls automatically route through it.
+
+```rust
+use cratestack::include_embedded_schema;
+use cratestack::{RusqliteRuntime, rusqlite_backend::ddl::create_table_sql};
+use cratestack_rusqlite::{opfs, ModelDelegate};
+
+include_embedded_schema!("schema.cstack");
+
+// Run inside a Dedicated Worker. The async step is one-time (per worker).
+async fn open_store() -> Result<RusqliteRuntime, Box<dyn std::error::Error>> {
+    opfs::install_opfs_vfs(&opfs::OpfsOptions::default()).await?;
+    let runtime = RusqliteRuntime::open("app.db")?;
+    runtime.with_connection(|conn| {
+        conn.execute_batch(&create_table_sql(&cratestack_schema::NOTE_MODEL))?;
+        Ok(())
+    })?;
+    Ok(runtime)
+}
+```
+
+`OpfsOptions` lets you tune the SAH pool directory, initial capacity (handles allocated up-front, one per open DB file + journal), and the `clear_on_init` flag (useful for "logged out, clear data" flows).
+
+Main-thread code can still use `RusqliteRuntime::open_in_memory()` for ephemeral state when OPFS isn't available.
+
+<Warning>
+Calling `opfs::install_opfs_vfs` on the **main thread** returns `OpfsInstallError::NotSupported`. Spawn a Dedicated Worker, run the runtime there, and `postMessage` between main thread and worker.
+</Warning>
+
 ## Filtering, Ordering, Paging
 
-The fluent delegate API mirrors the server side. Field accessors are emitted by `include_schema!` per model:
+The fluent delegate API mirrors the server side. Field accessors are emitted by `include_embedded_schema!` per model:
 
 ```rust
 let pinned_first = notes
@@ -127,7 +194,7 @@ let pinned_first = notes
 
 ## Storage Class Choices
 
-Mobile apps live or die by data fidelity, so the binding layer commits to canonical representations rather than relying on SQLite's loose typing:
+Embedded apps live or die by data fidelity, so the binding layer commits to canonical representations rather than relying on SQLite's loose typing:
 
 | `SqlValue` variant | Stored as | Notes |
 | --- | --- | --- |
@@ -149,18 +216,18 @@ Because columns use BLOB affinity, integer primary keys do **not** alias the SQL
 
 ## Soft Delete and Audit
 
-`@@soft_delete` works on device: `DELETE` calls become `UPDATE` of the soft-delete column, and every `find_*` automatically filters rows where the soft-delete column is non-null. `@@audit` is **not** wired on device — the audit log is a server-side compliance feature.
+`@@soft_delete` works embedded: `DELETE` calls become `UPDATE` of the soft-delete column, and every `find_*` automatically filters rows where the soft-delete column is non-null. `@@audit` and `@@emit` are currently **no-ops** in `include_embedded_schema!` — the local-journal / local-event-bus implementations land in a follow-up release (they need a sync-engine design pass first).
 
 ## The FFI Boundary
 
-The on-device runtime is sync, so it slots into FFI bridges (e.g. `flutter_rust_bridge`) without an async runtime to drag along. The boundary helpers in `cratestack_rusqlite::ffi` give you a small envelope to encode requests and responses across the language gap:
+The embedded runtime is sync, so it slots into FFI bridges (e.g. `flutter_rust_bridge` on native, `wasm-bindgen` in the browser) without an async runtime to drag along. The boundary helpers in `cratestack_rusqlite::ffi` give you a small envelope to encode requests and responses across the language gap:
 
 ```rust
 use cratestack_rusqlite::ffi::{
     OperationRequest, OperationResponse, json_request_from, json_response_into,
 };
 
-// In your cdylib entry point:
+// In your cdylib entry point (FFI) or wasm-bindgen module (browser):
 fn ffi_call(runtime: &cratestack::RusqliteRuntime, bytes: &[u8]) -> Vec<u8> {
     let request = match json_request_from(bytes) {
         Ok(req) => req,
@@ -176,7 +243,7 @@ The `dispatch(...)` function lives in your app crate — it knows the specific m
 
 ## Examples in the Framework Repo
 
-Three runnable examples, ordered by complexity:
+Three runnable native examples, ordered by complexity:
 
 1. **`sqlite_quickstart`** — smallest working program: open in-memory DB, bootstrap one table, CRUD a row.
 2. **`sqlite_offline_first`** — file-backed DB, two models, `Decimal` money preserved exactly, filtering and partial updates.
@@ -184,20 +251,20 @@ Three runnable examples, ordered by complexity:
 
 Run any of them with `cargo run --example <name> -p cratestack`.
 
+A browser example template (worker entry, OPFS install, schema bootstrap, message-port API) ships separately — see the framework repo's `examples/` directory for the latest reference implementation.
+
 ## Limits Today
 
-The on-device backend is intentionally focused. The following are **not** implemented and are unlikely to be in v1:
+The embedded backend is intentionally focused. The following are **not** implemented in 0.3.0:
 
-- policy enforcement at the storage layer (this is by design — see above)
-- transactional audit log
-- idempotency middleware (HTTP-layer concept; on device the app already controls retries)
-- generated HTTP routes (no transport on device)
+- policy enforcement at the storage layer (by design — see above)
+- `@@audit` and `@@emit` — directive parses, codegen is no-op, follow-up release will add the local journal + event bus
+- idempotency middleware (HTTP-layer concept; embedded apps already control retries)
+- generated HTTP routes (no transport in the embedded macro)
 - richer migration tooling (apps typically use `CREATE TABLE IF NOT EXISTS` + ad-hoc `ALTER TABLE` migrations)
-
-Both backends are currently compiled into the umbrella `cratestack` crate unconditionally. A future refinement will add feature gates so size-sensitive mobile builds can opt out of the sqlx/tokio stack — at which point `cratestack-rusqlite` will be usable as a leaf dependency with zero server-side weight. Today it is **already** usable that way; the umbrella just isn't gated yet.
 
 ## Read Next
 
-1. [Field Attributes](/reference/field-attributes) for the schema surface available on both backends
+1. [Field Attributes](/reference/field-attributes) for the schema surface available on every target
 2. [Scalars](/reference/scalars) including the `Decimal` precision contract that round-trips through SQLite TEXT storage
 3. [Quickstart](/getting-started/quickstart) for the server-side path
