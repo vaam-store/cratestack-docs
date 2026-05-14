@@ -46,6 +46,7 @@
         "group": "Banking Readiness",
         "pages": [
           "guides/idempotency",
+          "guides/upsert",
           "guides/optimistic-locking",
           "guides/audit-log",
           "guides/transaction-isolation",
