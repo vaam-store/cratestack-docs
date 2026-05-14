@@ -39,7 +39,8 @@
           "guides/telemetry",
           "guides/validators",
           "guides/offline-first-sqlite",
-          "guides/async-io-with-embedded-sqlite"
+          "guides/async-io-with-embedded-sqlite",
+          "guides/materialized-views"
         ]
       },
       {
@@ -75,7 +76,8 @@
           "reference/field-attributes",
           "reference/scalars",
           "reference/auth-support-matrix",
-          "reference/crypto"
+          "reference/crypto",
+          "reference/views"
         ]
       },
       {
@@ -83,6 +85,8 @@
         "pages": [
           "internals/core-architecture-adr",
           "internals/mcp-operator-adr",
+          "internals/views-adr",
+          "internals/schema-diff-adr",
           "internals/product-requirements",
           "internals/package-selection"
         ]

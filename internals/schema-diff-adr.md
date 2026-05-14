@@ -1,0 +1,200 @@
+---
+title: "ADR 0004: Schema Diff and Migration Generation"
+description: State-based migration generation from .cstack vs a committed schema snapshot, with CI verification and live-DB drift detection as separate concerns.
+---
+
+# ADR 0004: Schema Diff and Migration Generation
+
+## Status
+
+Proposed
+
+## Date
+
+2026-05-14
+
+## Context
+
+CrateStack's [migration runner](../guides/migrations) is a forward-only, checksum-verified applier of SQL migrations. The original position was that migrations are **hand-written**, because banks require reviewable SQL diffs and the runner is deliberately not a generator.
+
+That position is correct for the *runner* and stays. But it left a gap on the *authoring* side: developers were left to translate `.cstack` schema changes into SQL by eye, every time, across two SQL dialects (Postgres for sqlx targets, SQLite for rusqlite targets). This is exactly the kind of manual translation that produces drift, missed `NOT NULL` constraints, and copy-paste errors — and it scales poorly as the schema grows. It is also the precise opposite of CrateStack's "schema is the source of truth" stance for models, types, procedures, and (per [ADR 0003](./views-adr)) views.
+
+The framework needs a **schema diff and migration generation** capability that:
+
+1. Treats `.cstack` as the source of truth and generates SQL migrations as a derived artifact.
+2. Produces SQL that remains reviewable, commitable, and editable before merge.
+3. Distinguishes generation (offline, deterministic) from verification (against a real DB) from drift detection (against live production).
+4. Honors the strict per-backend macro split — separate migration trees for sqlx and rusqlite targets.
+5. Refuses to silently perform destructive or lossy operations.
+
+## Decision
+
+CrateStack will add a **state-based migration generator** that diffs `.cstack` against a committed schema snapshot and emits per-backend SQL migrations. The runner is unchanged — it consumes generated migrations identically to hand-written ones, with the same forward-only, checksum-protected semantics.
+
+This ADR supersedes the "not a schema-diff generator" claim in the [Migrations guide](../guides/migrations). The generator is a **developer tool**; the runner remains hand-written-friendly and the generated SQL remains reviewable before commit.
+
+### State-based, not migration-based
+
+`.cstack` is the source of truth. Migrations are derived. The diff input is:
+
+* **Desired schema** — parsed from the current `.cstack` files.
+* **Current schema** — read from a committed `schema.snapshot.json` reflecting the schema state after the last generated migration.
+
+This is offline and deterministic. No database connection is required to generate a migration. The snapshot is just `serde_json` over the existing `cratestack_core::Schema` AST, committed alongside the migration files.
+
+### Three separate commands
+
+| Command | Purpose | Inputs | Side effects |
+| --- | --- | --- | --- |
+| `cratestack migrate diff` | Generate a new migration | `.cstack` + committed snapshot | Writes new migration directory + updates snapshot |
+| `cratestack migrate verify` | Confirm migrations replay to the snapshot | All migrations + snapshot | Spawns ephemeral DB; read-only |
+| `cratestack migrate drift` | Report differences from a live DB | Live DB + snapshot | Read-only against the live DB |
+
+These are deliberately separate. `diff` is what the developer runs locally. `verify` is the CI gate — it replays the full migration history against an ephemeral Postgres/SQLite container and checks the resulting schema matches the snapshot byte-for-byte, catching hand-edited snapshots and hand-edited applied migrations. `drift` is the ops tool for "did someone hotfix production?" — it never writes anything and never generates a migration from live state, because conflating live drift with intended schema change is how silent corruption happens.
+
+### Per-backend layout
+
+```
+migrations/
+  postgres/
+    20260514_120000_initial/
+      up.sql
+      down.sql            ← present when generation is non-lossy
+      up.pre.sql          ← optional, hand-written, never overwritten
+      up.post.sql         ← optional, hand-written, never overwritten
+    schema.snapshot.json
+  sqlite/
+    20260514_120000_initial/
+      up.sql
+      down.sql
+    schema.snapshot.json
+```
+
+The two backends drift independently. Their SQL dialects differ, their constraint capabilities differ (SQLite cannot add a `NOT NULL` column without a default in one statement; Postgres can), and their materialized-view stories differ. Treating them as one would just produce least-common-denominator SQL.
+
+### Diff IR
+
+The diff engine produces a backend-agnostic intermediate representation, then per-backend emitters translate to SQL. The IR ops:
+
+```
+CreateTable, DropTable, RenameTable
+AddColumn, DropColumn, AlterColumnType, AlterColumnNullability,
+  AlterColumnDefault, RenameColumn
+AddIndex, DropIndex
+AddForeignKey, DropForeignKey
+AddCheck, DropCheck
+CreateView, DropView, ReplaceView
+CreateMaterializedView, DropMaterializedView
+CreateEnum, AlterEnumAddVariant, DropEnum
+```
+
+Each op carries a **destructiveness class**:
+
+* **safe** — `CreateTable`, `AddColumn` (nullable or with default), `AddIndex`, `CreateView`.
+* **lossy** — `DropColumn`, `DropTable`, `AlterColumnType` (narrowing), `DropEnum`. Data is destroyed.
+* **blocking** — `AddColumn NOT NULL` on a non-empty table, `AlterColumnNullability` (nullable → not null). The migration cannot succeed without a backfill.
+
+The generator refuses to emit lossy ops without explicit annotation or `--allow-destructive`. Blocking ops require either a `@default` (to backfill in-line) or a hand-written `up.pre.sql` that backfills before the constraint is applied.
+
+### Renames
+
+Schema diffing cannot infer renames from text alone — a column that disappears and a new column that appears look identical to drop-and-add. CrateStack requires **explicit rename annotation**:
+
+```cstack
+model Customer {
+  emailAddress String  @rename(from = "email")
+}
+```
+
+The generator reads `@rename` once, emits `ALTER TABLE customer RENAME COLUMN email TO email_address`, and the annotation stays in the schema as a no-op marker. A `cratestack migrate clean-renames` flag strips applied `@rename` markers. Same shape for `@@rename(from = "…")` on models.
+
+Heuristic rename detection is explicitly out of scope. False positives on renames silently destroy data.
+
+### Hand-written escape hatches
+
+Every generated migration directory supports two optional files the generator **never overwrites**:
+
+* `up.pre.sql` — runs before `up.sql` in the same transaction. For backfills, lookup-table seeds, anything the generator can't infer.
+* `up.post.sql` — runs after `up.sql` in the same transaction. For derived data updates, refreshing materialized views.
+
+The runner concatenates `up.pre.sql` + `up.sql` + `up.post.sql` and applies them transactionally (per the existing [migrations contract](../guides/migrations)). The hand-written halves are checksummed alongside the generated `up.sql`.
+
+### down.sql
+
+Generated only for non-lossy operations. For lossy ones, the file is emitted with an explicit error:
+
+```sql
+-- This migration contains destructive operations and cannot be auto-reversed:
+--   - DropColumn customer.legacy_status
+-- Write a real reverse migration before running `down`, or accept that this
+-- migration is forward-only.
+\echo 'destructive migration; reversal must be hand-written'
+\quit 1
+```
+
+Per the [runner contract](../guides/migrations), `down` is recorded but **never executed automatically**. The error-on-execute posture matches the runner's "irreversible by default" stance.
+
+### View and materialized-view ordering
+
+Views are emitted after their source-model DDL via the explicit `from M, N` dependency list ([ADR 0003](./views-adr)). A column change on a source model that a view selects triggers an automatic `DropView` → source-model alter → `CreateView` sequence within the same migration. Materialized views additionally emit a comment noting that the next manual `refresh()` is the developer's responsibility — the generator does not emit `REFRESH MATERIALIZED VIEW` automatically, for the same reason scheduler-driven refresh is deferred in ADR 0003.
+
+### Verification semantics
+
+`cratestack migrate verify` is the load-bearing CI step. Without it, the snapshot and the migration tree can diverge silently — someone hand-edits the snapshot, or hand-edits an already-applied migration's SQL, and `diff` happily produces no-op or wrong-op output forever after. `verify`:
+
+1. Spawns an ephemeral Postgres (sqlx target) or in-memory SQLite (rusqlite target).
+2. Applies every migration in order via the existing [runner](../guides/migrations).
+3. Introspects the resulting schema.
+4. Compares against the committed snapshot.
+5. Fails the build on any mismatch.
+
+This is the only step that catches snapshot tampering. It must be required in CI for the generator to be trustworthy.
+
+### Banking-readiness alignment
+
+* Generated SQL is committed and reviewable. The audit trail is what was *applied*, not what some tool computed in CI.
+* `verify` enforces that applied migrations produce the schema the snapshot claims. Drift between source-of-truth schema and applied state is a CI failure, not a runtime surprise.
+* `drift` against live production lets ops detect manual hotfixes before the next deploy attempts to re-diff them.
+* Lossy operations require explicit opt-in. The default is conservative.
+
+## Consequences
+
+### Positive
+
+* `.cstack` is unambiguously the source of truth for schema, end-to-end.
+* Migration authoring becomes a review of generated SQL plus targeted hand-edits, not full hand-translation.
+* Three distinct commands prevent conflating generation, verification, and drift detection — three problems that production tools routinely confuse.
+* Per-backend separation honors the macro-split discipline.
+* Destructive operations remain explicit and reviewable.
+
+### Negative
+
+* The snapshot file is a new committed artifact that can be tampered with. `verify` is the only thing protecting it; teams that skip the CI step lose the safety net.
+* The IR + per-backend emitter is real implementation work — non-trivial to ship correctly, especially for `AlterColumnType` across dialects.
+* Some operations (renames, backfills) require explicit annotation or hand-written halves. This is more work than fully automatic migration generation pretends to offer, but it is more honest about what schema diffing can and cannot infer.
+
+### Deferred
+
+* **Zero-downtime migration patterns** (expand-contract, dual-write columns) — out of scope. The generator should make these *expressible* via hand-written halves but should not try to generate them automatically.
+* **Multi-tenant schema rollouts** (apply migration to N shards) — out of scope.
+* **Migration squashing** (collapsing N migrations into one for a fresh checkout) — out of scope until the migration tree gets large enough that fresh setup time matters.
+
+## Shipping order
+
+1. `Schema` snapshot serialization (`serde_json::to_string_pretty`; the type already derives `Serialize`).
+2. Diff engine producing the IR. Initial op set: `CreateTable`, `DropTable`, `AddColumn` (safe), `DropColumn`, `AddIndex`, `DropIndex`. Type and nullability changes emit "unsupported, hand-write" stubs.
+3. Postgres SQL emitter.
+4. SQLite SQL emitter.
+5. `cratestack migrate diff` CLI command.
+6. `cratestack migrate verify` against ephemeral DBs.
+7. `cratestack migrate drift` against live DBs.
+8. `AlterColumnType`, `AlterColumnNullability`, `AlterColumnDefault`.
+9. `@rename` support.
+10. View IR ops (`CreateView`, `ReplaceView`, `DropView`).
+11. Materialized view IR ops.
+
+## Read Next
+
+1. [Migrations guide](../guides/migrations) — the runner contract this generator targets
+2. [ADR 0003: SQL views as projections of models](./views-adr) — view IR ops are defined here
+3. [Banking readiness](../overview/banking-readiness) — auditability requirements that shape the verify/drift split
