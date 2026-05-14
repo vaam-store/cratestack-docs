@@ -49,6 +49,7 @@
         "pages": [
           "guides/idempotency",
           "guides/upsert",
+          "guides/batches",
           "guides/optimistic-locking",
           "guides/audit-log",
           "guides/transaction-isolation",
