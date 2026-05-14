@@ -243,15 +243,27 @@ The `dispatch(...)` function lives in your app crate — it knows the specific m
 
 ## Examples in the Framework Repo
 
-Three runnable native examples, ordered by complexity:
+Cargo-native examples (run with `cargo run --example <name> -p cratestack`):
 
 1. **`sqlite_quickstart`** — smallest working program: open in-memory DB, bootstrap one table, CRUD a row.
 2. **`sqlite_offline_first`** — file-backed DB, two models, `Decimal` money preserved exactly, filtering and partial updates.
 3. **`sqlite_ffi_dispatch`** — the JSON-bytes FFI dispatcher you'd wrap with `flutter_rust_bridge`.
 
-Run any of them with `cargo run --example <name> -p cratestack`.
+Standalone workspace examples under [`examples/`](https://github.com/cratestack/cratestack/tree/main/examples) — pick the one that matches your deployment shape:
 
-A browser example template (worker entry, OPFS install, schema bootstrap, message-port API) ships separately — see the framework repo's `examples/` directory for the latest reference implementation.
+| Example | Host | Notes |
+| --- | --- | --- |
+| [`embedded-cli`](https://github.com/cratestack/cratestack/tree/main/examples/embedded-cli) | `clap`-driven CLI | Smallest end-to-end shape; no async. |
+| [`embedded-browser-vite`](https://github.com/cratestack/cratestack/tree/main/examples/embedded-browser-vite) | Vite + wasm in a Dedicated Worker | OPFS persistence. Sibling: `embedded-browser-webpack`, `embedded-browser-vite-pwa`. |
+| [`react-vite-daisyui`](https://github.com/cratestack/cratestack/tree/main/examples/react-vite-daisyui) | React + Tailwind 4 + DaisyUI 5 | Same wasm/OPFS shape with a real component library on top. |
+| [`react-nextjs-daisyui`](https://github.com/cratestack/cratestack/tree/main/examples/react-nextjs-daisyui) | Next.js App Router | All three CrateStack surfaces in one app: wasm in the browser, napi-rs on the Node side, typed HTTP client. PWA + offline-first sync. |
+| [`tauri-web`](https://github.com/cratestack/cratestack/tree/main/examples/tauri-web) / [`tauri-native`](https://github.com/cratestack/cratestack/tree/main/examples/tauri-native) | Tauri 2 desktop | Wasm-in-webview vs. native-Rust shell variants. |
+| [`embedded-flutter`](https://github.com/cratestack/cratestack/tree/main/examples/embedded-flutter) | Flutter + `flutter_rust_bridge` | macOS / Android / iOS. |
+| [`embedded-expo`](https://github.com/cratestack/cratestack/tree/main/examples/embedded-expo) | React Native + Expo native module | JSON FFI envelope across the JS↔native boundary. |
+| [`embedded-daemon`](https://github.com/cratestack/cratestack/tree/main/examples/embedded-daemon) | tokio + `notify` daemon | Demonstrates the **async-around-sync** pattern — see the [companion guide](/guides/async-io-with-embedded-sqlite). |
+| [`embedded-webhook`](https://github.com/cratestack/cratestack/tree/main/examples/embedded-webhook) | axum HTTP server with its own SQLite | Same `spawn_blocking` pattern; the "small service with state" shape. |
+
+If you're embedding the SQLite path inside a tokio process (server, daemon, anything async), read **[Async I/O with Embedded SQLite](/guides/async-io-with-embedded-sqlite)** next — it covers the `spawn_blocking` seam that the daemon and webhook examples exist to demonstrate.
 
 ## Limits Today
 

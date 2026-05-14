@@ -38,7 +38,8 @@
         "pages": [
           "guides/telemetry",
           "guides/validators",
-          "guides/offline-first-sqlite"
+          "guides/offline-first-sqlite",
+          "guides/async-io-with-embedded-sqlite"
         ]
       },
       {
