@@ -180,3 +180,38 @@ pub async fn batch_create_accounts(
 ```
 
 The follow-up auto-route emission will preserve this exact shape; lifting hand-rolled handlers onto the generated path will be a deletion, not a migration.
+
+## Worked example: the `notes` CLI
+
+The [`embedded-cli` example](https://github.com/cratestack/cratestack/tree/main/examples/embedded-cli) ships three batch-aware subcommands so you can see the envelope in actual terminal output rather than just JSON snippets:
+
+```text
+$ cargo run -p embedded-cli-example -- import notes.json
+OK  [0] 11111111-1111-1111-1111-111111111111  first
+OK  [1] 22222222-2222-2222-2222-222222222222  second
+summary: 2 total, 2 ok, 0 err
+
+$ cargo run -p embedded-cli-example -- bulk-done \
+    11111111-1111-1111-1111-111111111111 \
+    99999999-9999-9999-9999-999999999999
+OK  [0] 11111111-…  first
+ERR [1] NOT_FOUND: no row matched
+summary: 2 total, 1 ok, 1 err
+
+$ cargo run -p embedded-cli-example -- bulk-delete \
+    11111111-1111-1111-1111-111111111111 \
+    22222222-2222-2222-2222-222222222222 \
+    99999999-9999-9999-9999-999999999999
+OK  [0] 11111111-…  first
+OK  [1] 22222222-…  second
+ERR [2] NOT_FOUND: no row matched
+summary: 3 total, 2 ok, 1 err
+```
+
+| Subcommand | Primitive | Notes |
+|---|---|---|
+| `notes import <file.json>` | `batch_upsert` | Idempotent JSON ingestion. Re-running the same file converges instead of duplicating. |
+| `notes bulk-done <id...>` | `batch_update` | Missing ids surface as per-item `NOT_FOUND` without aborting the successful ones. |
+| `notes bulk-delete <id...>` | `batch_delete` | Single statement; ids that didn't match (or were already tombstoned, on soft-delete models) surface as per-item `NOT_FOUND`. |
+
+The `print_envelope()` helper at the bottom of [`examples/embedded-cli/src/main.rs`](https://github.com/cratestack/cratestack/blob/main/examples/embedded-cli/src/main.rs) is six lines and copy-paste-ready for any sync rusqlite-backed app.
