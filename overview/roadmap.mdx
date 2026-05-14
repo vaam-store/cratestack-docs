@@ -1,0 +1,150 @@
+---
+title: Roadmap
+description: Structured view of in-flight and deferred work, the rationale for each deferral, and what would unblock each item.
+---
+
+# Roadmap
+
+This is the single canonical list of work that has been **proposed, designed, or partially shipped**, plus the rationale for each deferral and what would unblock it. The [Current State](./current-state) page is the snapshot of what's *implemented* today; this page is the snapshot of what's *known to be missing*.
+
+Items are grouped by area, not by release. Each entry has the same shape:
+
+- **Status** — Proposed (no code), Designed (ADR shipped), Partial (some code landed), Deferred (decided to skip in current scope).
+- **What** — short description.
+- **Why deferred** — what made us stop short.
+- **Unblocks on** — concrete prerequisite that would let work resume.
+
+## Schema diff and migration generation
+
+Tracking [ADR 0004](../internals/schema-diff-adr).
+
+### `cratestack migrate verify`
+
+- **Status:** Designed
+- **What:** CI gate that replays the generated migration history against an ephemeral Postgres / SQLite and confirms the resulting schema matches the committed snapshot byte-for-byte. Required to make the diff generator trustworthy: without it, snapshot tampering and hand-edited applied migrations go undetected.
+- **Why deferred:** Needs ephemeral database spawning. Postgres needs Docker via `testcontainers` (CI infrastructure decision); SQLite in-memory is trivial but ships in the same slice for parity.
+- **Unblocks on:** Decision on the testcontainers dependency footprint, or a pluggable `Spawner` trait that lets the user supply their own ephemeral instances.
+
+### `cratestack migrate drift`
+
+- **Status:** Designed
+- **What:** Operator-facing command that introspects a live database and reports differences from the committed snapshot. Strictly read-only; never generates a migration from live state. For "did someone hotfix production?"
+- **Why deferred:** Needs live-DB schema introspection — `pg_catalog` queries for Postgres, `sqlite_master` + `PRAGMA table_info` for SQLite. That means pulling sqlx / rusqlite into the `cratestack-migrate` crate or splitting the introspection layer into per-backend feature-gated modules.
+- **Unblocks on:** Crate boundary decision — does `cratestack-migrate` take on driver deps, or does a sibling `cratestack-migrate-introspect-{pg,sqlite}` ship the connectivity?
+
+### View IR ops in the diff engine
+
+- **Status:** Designed
+- **What:** `CreateView` / `ReplaceView` / `DropView` / `CreateMaterializedView` / `DropMaterializedView` operations in the migration IR, with Postgres / SQLite emitters that order view DDL after the source-model DDL the view depends on.
+- **Why deferred:** The `view` block itself ([ADR 0003](./views-adr)) needs parser, AST, validator, and macro work before the diff engine has anything to lower into IR. See "View block" below.
+- **Unblocks on:** View block landing (parser → AST → validator → macros → delegates).
+
+### `DropEnumVariant`
+
+- **Status:** Designed
+- **What:** Diff op + Postgres emission for removing a single enum variant. Multi-step: create new type, `ALTER COLUMN … TYPE new_enum USING (…)` on every referencing table, drop old type.
+- **Why deferred:** Postgres has no `DROP VALUE`, so the migration is a sequence of ops + a backfill plan for any rows already holding the dropped variant. The IR-level sequencing is tractable; the backfill is the developer's responsibility but the generator should at least scaffold the swap-dance.
+- **Unblocks on:** Designing the IR shape for multi-op sequences with a hand-written `up.pre.sql` slot for the backfill.
+
+## Views and materialized views
+
+Tracking [ADR 0003](../internals/views-adr).
+
+### View block (parser → AST → macros → delegates)
+
+- **Status:** Designed
+- **What:** `view <Name> from <Model>, <Model>, …` block with `@from(M.f)` source bindings, per-backend `@@server_sql` / `@@embedded_sql` (and a `@@sql` shorthand), `@@allow("read", …)` only. Generates a read-only `ViewDelegate` via a shared `ReadSource` trait. See [Views reference](../reference/views) for the full surface.
+- **Why deferred:** Substantial surface area — parser changes in `cratestack-parser`, AST extension in `cratestack-core` (`Schema.views`), validator rules, macro emission in `cratestack-macros`, `ReadSource` trait split in `cratestack-sql`, `ViewDelegate` in both `cratestack-sqlx` and `cratestack-rusqlite`. ~1500–2500 LOC across 6 crates. Deserves its own focused PR.
+- **Unblocks on:** Nothing external — it's straightforward incremental work, just not bundled with anything else.
+
+### Materialized views (`@@materialized`)
+
+- **Status:** Designed (server-only by design)
+- **What:** Postgres-backed materialized view with a manually-invoked `refresh()` method on the delegate. Embedded build fails with a hard compile error referencing ADR 0003.
+- **Why deferred:** Layered on top of the view block; nothing to materialize until views exist.
+- **Unblocks on:** View block landing.
+
+### Time-based and event-driven materialized-view refresh
+
+- **Status:** Deferred
+- **What:** `@@materialized(refresh = "5m")` for scheduler-driven refresh; event-driven refresh wired to `ModelEvent` streams with debounce.
+- **Why deferred:** CrateStack has no scheduler primitive yet, and spawning `tokio::task` from the macro is the wrong layer. Event-driven refresh additionally needs a debounce-window configuration the schema can't naturally express. Both are application-layer concerns until proven otherwise.
+- **Unblocks on:** A scheduler primitive (separate proposal), and a concrete use case that justifies framework-level refresh trigger semantics over app-level cron / job-runner code.
+
+## Multi-database server support
+
+### MySQL and SQLite-via-sqlx for the server backend
+
+- **Status:** Partial (architectural seam in place)
+- **What:** `include_server_schema!(..., db = Postgres)` already accepts a `db = …` argument. MySQL and SQLite-via-sqlx are non-breaking future additions.
+- **Why deferred:** Postgres is the only wired implementation today; each additional backend needs its own SQL emitter and dialect tests.
+- **Unblocks on:** Concrete demand. The seam is wide enough that adding a backend doesn't require a rewrite.
+
+## Transport and codecs
+
+### COSE transport envelope
+
+- **Status:** Designed
+- **What:** COSE envelope layer over the existing CBOR codec — signed / encrypted bodies for service-to-service authentication and message integrity.
+- **Why deferred:** Unimplemented seam in the transport architecture; the codec layer is ready for it but the envelope wiring isn't done.
+- **Unblocks on:** A concrete use case that needs envelope-level crypto rather than transport-level TLS.
+
+### Negotiated multi-codec routing
+
+- **Status:** Partial
+- **What:** End-to-end content negotiation between JSON and CBOR on a per-route basis, including Accept-header–driven response codec selection.
+- **Why deferred:** Routing is partially spiked; codec implementations themselves (JSON, CBOR) are first-class. The negotiation is the remaining seam.
+- **Unblocks on:** Closing the routing seam.
+
+## Embedded SQLite
+
+### `@@audit` and `@@emit` on embedded
+
+- **Status:** Designed (currently no-ops)
+- **What:** Local-journal and local-event-bus implementations for `@@audit` and `@@emit` in `include_embedded_schema!`, needed for sync-engine wiring.
+- **Why deferred:** Both attributes parse and codegen cleanly today but emit no-ops on the embedded backend. The full implementation depends on the sync-engine surface, which is itself unscheduled.
+- **Unblocks on:** Sync engine design.
+
+### Binary-size feature gating for embedded-only builds
+
+- **Status:** Partial workaround in place
+- **What:** Allow consumers of the umbrella `cratestack` crate to opt out of the sqlx / tokio stack on embedded-only builds.
+- **Why deferred:** Workspace-level feature plumbing across many crates. The workaround today is: depend directly on `cratestack-macros` + `cratestack-rusqlite` to shed the server-side weight.
+- **Unblocks on:** Feature-flag audit across the workspace.
+
+## Validators
+
+### Fractional bounds for `@range` on Decimal
+
+- **Status:** Designed
+- **What:** `@range(min: 0.01)` on `amount Decimal`. Today the parser only accepts `i64` literal bounds, so fractional bounds aren't expressible despite `Decimal` being the natural use case.
+- **Why deferred:** Parser change to accept fractional literals; lives outside the banking-readiness track. Documented as such in [validators](../guides/validators#range-on-decimal).
+- **Unblocks on:** Parser slice that adds fractional-literal support.
+
+## Policy and exposure
+
+### Richer exposure controls and field-level policy
+
+- **Status:** Partial
+- **What:** Broader exposure controls beyond the current policy subset, plus some field-level policy features still deferred.
+- **Why deferred:** The shipped policy subset is what banks need today; remaining features depend on use cases that haven't surfaced yet.
+- **Unblocks on:** Concrete asks from production users.
+
+## Rate limiting
+
+### Distributed rate-limit stores
+
+- **Status:** Designed (trait is pluggable; only in-memory shipped)
+- **What:** Redis or other multi-replica `RateLimitStore` implementations.
+- **Why deferred:** The trait is in place; the single-replica in-memory store covers the most common deployments and the API for plugging in a multi-replica store doesn't need changing.
+- **Unblocks on:** A multi-replica deployment that actually needs it.
+
+## How this list is maintained
+
+When a slice ships, move it from this page to [Current State](./current-state) and remove it here. When a new piece of work is proposed (ADR, design doc, or PR), add it here with `Status: Proposed` until it lands or gets explicitly closed. Items that get decided "not now" but still have value remain here as `Deferred` with a clear "Unblocks on" line — that's what distinguishes deferred from rejected.
+
+## Read Next
+
+1. [Current State](./current-state) — what's implemented today
+2. [Banking Readiness](./banking-readiness) — the regulated-workload primitive set
+3. [Release Track](./release-track) — versioning and stability expectations

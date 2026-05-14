@@ -124,12 +124,25 @@ INSERT INTO transfers_status_lookup (key, label)
 All three statements land atomically. A failure in the `INSERT` rolls the
 `CREATE TABLE` and `CREATE INDEX` back together.
 
-## What this is not
+## What the runner is not
 
-1. not a schema-diff generator — banks write their migrations by hand because the change has to be reviewable as a SQL diff
-2. not a `down`/rollback engine — `down` is recorded for audit but never run
-3. not a parallel-applier — migrations are sequential and serialized through the tracking table
-4. not a long-running-migration coordinator — banks executing a 6-hour `ALTER TABLE` use their own backfill tooling and record the migration as a no-op when the backfill is done
+1. not a `down`/rollback engine — `down` is recorded for audit but never run
+2. not a parallel-applier — migrations are sequential and serialized through the tracking table
+3. not a long-running-migration coordinator — banks executing a 6-hour `ALTER TABLE` use their own backfill tooling and record the migration as a no-op when the backfill is done
+
+## Generating migrations from `.cstack`
+
+The runner consumes SQL migrations identically whether they are hand-written or generated. CrateStack ships a separate **schema diff generator** that produces those migrations from `.cstack` against a committed schema snapshot — see [ADR 0004](../internals/schema-diff-adr) for the full design.
+
+Three commands cover the lifecycle:
+
+* `cratestack migrate diff` — offline. Diffs the current `.cstack` against `migrations/<backend>/schema.snapshot.json` and writes a new migration directory.
+* `cratestack migrate verify` — CI gate. Replays the full migration history against an ephemeral DB and checks the result matches the snapshot.
+* `cratestack migrate drift` — ops tool. Reports differences between the snapshot and a live database. Read-only.
+
+Generated migrations remain reviewable SQL diffs — that property is preserved. The generator just removes the hand-translation step from `.cstack` to SQL. Destructive operations (column drop, lossy type change) still require explicit opt-in, and renames still require an explicit `@rename` annotation.
+
+Hand-written migration steps coexist with generated ones via optional `up.pre.sql` / `up.post.sql` files inside the migration directory; the generator never overwrites them. Use these for backfills, lookup-table seeds, materialized-view refreshes, and any transform the diff engine cannot infer.
 
 ## Schema
 
@@ -147,5 +160,6 @@ idempotently by `ensure_migrations_table`.
 
 ## Read Next
 
-1. [Audit log](./audit-log) — banks frequently land `@@audit` retroactively via a migration
-2. [Soft delete](./soft-delete) — `deleted_at` columns are typically added by a follow-up migration on existing models
+1. [ADR 0004: Schema diff and migration generation](../internals/schema-diff-adr) — how `.cstack` changes turn into the SQL this runner applies
+2. [Audit log](./audit-log) — banks frequently land `@@audit` retroactively via a migration
+3. [Soft delete](./soft-delete) — `deleted_at` columns are typically added by a follow-up migration on existing models
