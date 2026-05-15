@@ -1,0 +1,171 @@
+---
+title: Studio Power Tools
+description: SQL preview, drift detection, CSV/JSON export, schema search, and the audit log — the Phase 4 admin surface beyond CRUD.
+---
+
+# Studio Power Tools
+
+Phase 4 adds five surfaces on top of the
+[read](./read-api) and [write](./write-api) APIs. They're optional —
+none of them change the CRUD contract — but they're what makes Studio
+useful as an admin tool rather than just a row browser.
+
+## SQL preview
+
+```
+GET /api/targets/:key/models/:model/sql?op=list|get|create|update|delete&pk=…
+```
+
+Renders the SQL Studio _would_ run for an operation without touching
+the database. Lets you understand what the abstraction is doing
+before pulling the trigger, or copy it into a query tool to tweak by
+hand. Bound parameters are returned alongside the SQL text so you
+don't have to read the placeholders.
+
+```bash
+curl 'http://127.0.0.1:7878/api/targets/catalog/models/Post/sql?op=update&pk=p1'
+# {
+#   "driver": "postgres",
+#   "sql": "WITH updated AS ( UPDATE \"posts\" SET \"title\" = $1 WHERE \"id\" = $2 RETURNING * ) ...",
+#   "params": [
+#     { "index": 1, "binding": "title", "kind": "text" },
+#     { "index": 2, "binding": "p1",    "kind": "text" }
+#   ]
+# }
+```
+
+API-backed targets return `501 UNSUPPORTED` — Studio doesn't render
+SQL it doesn't run.
+
+## Drift
+
+```
+GET /api/targets/:key/drift
+```
+
+Compares the schema's declared columns to the live database
+(`information_schema` on Postgres, `PRAGMA table_info` on SQLite) and
+reports the result per model:
+
+| `status`         | Meaning                                                                  |
+| ---------------- | ------------------------------------------------------------------------ |
+| `ok`             | Live columns match the schema's declared shape.                          |
+| `drift`          | Some columns differ — `missing_columns` and `extra_columns` are populated. |
+| `missing_table`  | The table doesn't exist (the migration hasn't been run).                 |
+| `unsupported`    | This target can't be inspected (API-only).                               |
+| `skipped`        | Resolution failed (no `@id` or unsupported PK type).                     |
+
+```bash
+curl 'http://127.0.0.1:7878/api/targets/catalog/drift'
+# {
+#   "target": "catalog",
+#   "models": [
+#     { "model": "Post",     "status": "ok" },
+#     { "model": "Customer", "status": "drift", "missing_columns": ["phone"] }
+#   ]
+# }
+```
+
+The UI renders a small `⚠ drift` chip next to drifting models in the
+sidebar and `✕ table` for missing tables.
+
+## CSV/JSON export
+
+```
+GET /api/targets/:key/models/:model/export?format=csv|json&limit=N
+```
+
+Pulls up to `limit` rows (capped at **10 000**) through cursor
+pagination internally and returns one body. Sets
+`Content-Disposition: attachment; filename="<target>-<table>.<ext>"`
+so the browser downloads the file straight from the link.
+
+CSV uses RFC-4180-style escaping (quote-wrap on commas, quotes, or
+newlines; double up embedded quotes). JSON is a flat array of objects,
+field names as keys.
+
+```bash
+curl 'http://127.0.0.1:7878/api/targets/catalog/models/Post/export?format=csv&limit=1000' \
+  -o posts.csv
+```
+
+The export endpoint is bounded — it's for "developer pulling a sample
+for a notebook," not "ETL." For multi-million-row dumps, hit the
+database directly.
+
+## Schema search
+
+```
+GET /api/targets/:key/search?q=<term>
+```
+
+Case-insensitive substring over models, fields (including the
+`Model.field` path and the field's type), enums and their variants,
+mixins, types, and procedures. Empty query returns `{ "hits": [] }`.
+
+```bash
+curl 'http://127.0.0.1:7878/api/targets/catalog/search?q=author'
+# {
+#   "hits": [
+#     { "kind": "field", "model": "Post", "name": "author",  "detail": "Customer required" },
+#     { "kind": "field", "model": "Post", "name": "authorId","detail": "Int required" }
+#   ]
+# }
+```
+
+Hit `kind` is one of `model`, `field`, `type`, `enum`, `mixin`,
+`procedure`. The UI renders an inline dropdown directly under the
+search bar in the header.
+
+## Audit log
+
+```
+GET /api/audit?limit=N
+```
+
+Studio holds every successful write (CREATE / UPDATE / DELETE) in an
+in-memory ring buffer, capped at **500** entries, FIFO when full.
+Entries are returned newest-first:
+
+```json
+{
+  "entries": [
+    {
+      "id": 42,
+      "at": "2026-05-15T12:34:56Z",
+      "target": "catalog",
+      "model": "Post",
+      "op": "UPDATE",
+      "pk": "p1"
+    }
+  ]
+}
+```
+
+The buffer lives in process memory only — Studio is a local admin
+tool, not a logging pipeline. Restarting the binary clears the log.
+The UI's "Audit" button in the header opens an overlay listing the
+most recent 100 entries.
+
+## Constraint errors → VALIDATION_ERROR
+
+Studio used to surface driver constraint failures as
+`DATABASE_ERROR` (500). Phase 4 maps the well-known codes back to the
+same per-field `VALIDATION_ERROR` envelope as the in-process
+validators:
+
+| Source                                            | Code            |
+| ------------------------------------------------- | --------------- |
+| PG `23505` / SQLite `SQLITE_CONSTRAINT_UNIQUE` / `…_PRIMARYKEY` | `UNIQUE`        |
+| PG `23503` / SQLite `SQLITE_CONSTRAINT_FOREIGNKEY`             | `FOREIGN_KEY`   |
+| PG `23502` / SQLite `SQLITE_CONSTRAINT_NOTNULL`                | `REQUIRED`      |
+| PG `22001` (string truncation)                                 | `LENGTH`        |
+| PG `22P02` (invalid text representation)                       | `TYPE_MISMATCH` |
+| PG `23514` / SQLite `SQLITE_CONSTRAINT_CHECK`                  | `REGEX`         |
+
+Unrecognized errors still come back as `DATABASE_ERROR`.
+
+The wire envelope is identical to the in-process validator path
+(see the [write API](./write-api#validators) page), so the UI doesn't
+care whether the rejection came from Studio's pre-flight check or the
+database's constraint engine.

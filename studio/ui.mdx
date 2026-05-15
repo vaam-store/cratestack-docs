@@ -148,14 +148,57 @@ Each model header shows a small badge reflecting the target's mode:
 RO targets — the badge is there to communicate intent before users
 click anything.
 
+## Typed editors (Phase 1d)
+
+The create form and the drawer's edit mode dispatch on each field's
+declared scalar instead of painting a single text box everywhere:
+
+| Scalar                       | Control                                              |
+| ---------------------------- | ---------------------------------------------------- |
+| enum                         | `<select>` populated from the schema's variants       |
+| `Json`                       | `<textarea>` (parsed on submit)                       |
+| `DateTime`                   | `<input type="datetime-local">` (auto-normalized to UTC `Z`) |
+| `Float` / `Decimal`          | `<input type="number" step="any">`                    |
+| `Int`                        | `<input type="number" step="1">`                      |
+| `Boolean`                    | `<select>` (true/false; blank → null on optional)     |
+| `String` / `Cuid` / `Uuid`   | plain text                                            |
+
+The model-list endpoint (`GET /api/targets/:key/models`) carries
+`is_enum` and `enum_variants` per field so the UI can render the
+dropdown without a second fetch.
+
+## Power tools (Phase 4)
+
+Three additions to the records pane and two to the header — together
+they round out the read-API surface for poking around the system:
+
+- **Tools row** above the records table:
+  - An op selector + **Show SQL** button that fetches the rendered
+    SQL Studio would run for `list` / `get` / `create` / `update` /
+    `delete` and displays it with bound parameters.
+  - **Export JSON** / **Export CSV** links pointing at the export
+    endpoint so the browser downloads the file.
+- **Drift dots** on each model in the sidebar. `⚠ drift` in amber
+  when columns don't match; `✕ table` in red when the table is
+  missing entirely. Driven by `GET /api/targets/:key/drift`.
+- **Schema search** in the header. Type a term and matching models /
+  fields / enums show up in a dropdown right below the input.
+- **Audit button** in the header opens a 28rem overlay listing the
+  most recent CREATE / UPDATE / DELETE operations from the
+  in-memory ring buffer (cap 500, FIFO).
+
+See the [tools reference](./tools) for the underlying endpoints.
+
 ## What's not in the UI yet
 
-- **Typed pickers for enums.** Phase 1d. Today every input is a
-  single text box; you type enum values literally.
-- **Rich editors for JSON / DateTime / Decimal.** Phase 1d. JSON
-  values render pretty-printed in read mode but the edit input is
-  still a plain text box.
-- **SQL preview and query plan / drift indicators.** Phase 4.
+- **Persistent audit log.** Today the buffer lives in process memory
+  only — fine for local admin, not for an org-wide log.
+- **EXPLAIN / query plan beside the SQL preview.** The preview ships
+  the rendered SQL; running `EXPLAIN` against the live database is
+  out of scope.
+- **Inline diff between schema and live DB.** Drift reports
+  missing/extra columns; a column-by-column diff would be a Phase 5
+  ergonomic upgrade.
 
 The UI itself is plain Leptos CSR — fork it via
 [`cratestack studio eject`](./eject) if you need to customize the visual
