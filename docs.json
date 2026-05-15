@@ -41,7 +41,8 @@
           "guides/validators",
           "guides/offline-first-sqlite",
           "guides/async-io-with-embedded-sqlite",
-          "guides/materialized-views"
+          "guides/materialized-views",
+          "guides/rpc-transport"
         ]
       },
       {
@@ -90,6 +91,7 @@
           "internals/mcp-operator-adr",
           "internals/views-adr",
           "internals/schema-diff-adr",
+          "internals/rpc-transport-adr",
           "internals/product-requirements",
           "internals/package-selection"
         ]

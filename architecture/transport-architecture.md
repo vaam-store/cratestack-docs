@@ -10,7 +10,16 @@ Current implementation is narrower than this design:
 2. CBOR is the only first-party checked-in server codec crate today
 3. JSON support currently exists inline in `cratestack-client-rust` rather than as a dedicated codec crate
 4. COSE remains an unimplemented envelope seam
-5. `application/cbor-seq` is not implemented yet
+5. `application/cbor-seq` is supported for `Sequence`-kind ops on the RPC binding via content negotiation; not yet wired into the REST binding for list-return procedures
+
+## RPC binding update
+
+Since this document was first written, CrateStack also ships a **second binding style** for `.cstack` schemas — see `./../internals/rpc-transport-adr.md` for the canonical ADR. The codec / framing / envelope layering below is unchanged and applies to both bindings; the addition is at the *routing* layer:
+
+1. A `.cstack` schema picks **one** generation style with the top-level `transport rest|rpc` directive. Default is `rest` (back-compat with everything written before the directive existed).
+2. `transport rpc` schemas mount `POST /rpc/{op_id}` (unary) and `POST /rpc/batch` instead of REST-shaped per-model routes. Streaming for `Sequence`-kind ops works on the same unary route via `Accept: application/cbor-seq` — same negotiated framing as below.
+3. Errors on the RPC binding go on the wire as `RpcErrorBody { code, message, details? }` with gRPC-style lowercase codes (`not_found`, `invalid_argument`, `permission_denied`, …) rather than the REST `CoolErrorResponse` shape.
+4. WebSocket binding + subscriptions remain pending — the next cool upgrade for this transport surface, but gated on a concrete subscription use case. See "Next cool upgrade" below.
 
 ## Purpose
 
@@ -298,3 +307,22 @@ Recommended order:
 ## Canonical Companion Document
 
 `./http-transport-contract.md` should be read alongside this document. This architecture file explains the model and boundaries. The HTTP contract file explains concrete request, response, and negotiation behavior.
+
+## Next cool upgrade — WebSocket binding + subscriptions
+
+The HTTP surface of the transport architecture is now feature-complete for both REST and RPC bindings. The single remaining direction is a **WebSocket binding** for the RPC generation style, which would unlock:
+
+1. **Subscriptions** — `model.<X>.subscribe` ops that stream a sequence of `ModelEvent<X>` frames over a long-lived channel, terminated by client cancellation or disconnect. The design is captured in `./../internals/rpc-transport-adr.md` §3.4 (WS frame loop) and §2.1 (`OpKind::Subscription`).
+2. **Bidirectional streams** — for any future call shape that needs request frames on the same channel rather than per-request HTTP roundtrips.
+
+The wire-side design is already drafted (`cratestack-rpc-v1+cbor` subprotocol, six-variant frame envelope, channel-level auth at upgrade with HMAC, bounded per-subscription buffer with `unavailable` overflow signal). The pieces still to build:
+
+1. **`@@subscribe` schema directive.** `OpKind::Subscription` exists in `cratestack-core`, but no `.cstack` syntax produces it today. Probably looks like `@@subscribe(filter)` on a model declaration plus an optional `subscription procedure foo(...)` top-level form for procedure-shaped subscriptions.
+2. **WS frame loop in the macro-emitted dispatcher.** Reuses the existing `rpc_dispatch_inner` per-op routing for `Request` frames; needs new code for `Cancel`, `StreamItem`/`StreamEnd` fan-out, and the upgrade-time HMAC check.
+3. **`CoolEventBus` fan-out wiring.** The bus already exists in `cratestack-core` and is what a subscription rides on; the per-subscription bounded buffer + lag detection needs to be added.
+
+### Why streaming shipped without ceremony but subscriptions are paused
+
+Streaming was clearly useful from day one: list-return procedures, audit feeds, paginated reads — all naturally produce a finite sequence and clients ask for them by sending `Accept: application/cbor-seq`. The shape was concrete, the demand was concrete, the implementation came for free out of the existing sequence encoder.
+
+Subscriptions don't have that profile yet. CrateStack's audit and event-bus consumers today are server-to-server and poll or consume from the audit sink directly — they don't need a WS channel. External clients (mobile, browser SPAs) are the natural fit for subscriptions, but no concrete CrateStack consumer is asking for them right now. So the design is captured and the runtime is not built. **When a concrete subscription use case appears, this becomes the next implementation lift.** Until then, the gap is deliberate.

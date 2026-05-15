@@ -2,11 +2,11 @@
 
 ## Status
 
-Proposed (initial). **Updated in 0.3.0** — see "0.3.0 macro-split update" below.
+Proposed (initial). **Updated in 0.3.0** — see "0.3.0 macro-split update" below. **Further updated post-0.3.2** — see "RPC binding addendum" below.
 
 ## Date
 
-2026-04-26 (initial). 0.3.0 update: 2026-05-12.
+2026-04-26 (initial). 0.3.0 update: 2026-05-12. RPC binding addendum: 2026-05-15.
 
 ## 0.3.0 macro-split update
 
@@ -17,6 +17,19 @@ The original ADR proposed a single `include_schema!` macro emitting both server 
 - `include_client_schema!("schema.cstack")` — HTTP client stubs only (renamed from `include_client_macro!`)
 
 The split is strict: server emit never references rusqlite, embedded emit never references sqlx. The rest of this ADR's reasoning (single schema, generated delegates, host-owned auth, etc.) remains intact — the macro split is an implementation refinement, not a directional change. Code examples below use the original `include_schema!` for historical accuracy; in 0.3.0 those become `include_server_schema!(..., db = Postgres)` for server contexts.
+
+## RPC binding addendum
+
+Two constraints from the Context section below are superseded:
+
+- "**HTTP REST only.**" — still the default; no longer the only option.
+- "**No RPC transport in v0.**" — supersded.
+
+Schemas now choose their binding via a top-level `transport rest|rpc` directive. `transport rest` (the default) keeps everything in this ADR exactly as written: REST routes, the per-route negotiation in the [REST Transport](#rest-transport) section below, the procedure-as-POST convention, all of it. `transport rpc` swaps the routing layer for `POST /rpc/{op_id}` + `POST /rpc/batch` and emits a uniform `RpcErrorBody` shape on every error path; everything else in this ADR (single schema, generated delegates, host-owned auth, codec/envelope layering, exposure controls) is unchanged.
+
+"Alternative 8: Support RPC Transport" at the bottom of this ADR was rejected at the time on a use-case basis (no need then, REST sufficed). The use case became concrete as the framework grew into batching and streaming demands that REST didn't address cleanly — see [ADR 0005](./rpc-transport-adr) for the full design, the shipping order across PRs #20–#24, and the deferred-but-designed WebSocket binding + subscriptions that are the next cool upgrade for this surface.
+
+REST is and remains the canonical first-class binding for CrateStack v0 schemas. The RPC binding is an alternative generation style, not a replacement.
 
 ## Context
 
