@@ -78,7 +78,8 @@
         "pages": [
           "studio/quickstart",
           "studio/read-api",
-          "studio/ui"
+          "studio/ui",
+          "studio/eject"
         ]
       },
       {
