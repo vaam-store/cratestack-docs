@@ -16,14 +16,16 @@ Studio replaces the older `generate-studio` codegen scaffold from the
 see the [migration](#migration-from-generate-studio) section.
 
 <Warning>
-**Phase 1b (current)** completes Studio's read story: SQLite via
-`rusqlite`, relation traversal (`/records/:pk/rel/:field`), API-backed
-list/get against deployed cratestack services, and a Leptos+Trunk web
-UI you can run locally. Mutations land in Phase 3.
+**Phase 2 (current)** makes Studio distributable:
+[`studio eject`](./eject#eject-the-ui-sources) writes the UI sources to
+a writable directory you can fork, and the
+[`embed-ui` cargo feature](./eject#bundle-the-ui-into-the-binary)
+bundles the SPA into the Studio binary so you can hand `cratestack`
+to a colleague without Trunk in the picture. The read API
+(Phase 1a/1b) is otherwise unchanged. Mutations land in Phase 3.
 
-The endpoints are documented in detail in
-[Studio Read API](./read-api), and the browser UI in
-[Studio UI](./ui).
+Reference pages: [Studio Read API](./read-api),
+[Studio UI](./ui), [Studio Eject](./eject).
 </Warning>
 
 ## 1. Install The CLI
@@ -234,6 +236,6 @@ returns `NotImplemented`.
 | 1a    | Read API: six JSON endpoints + Postgres source + `env:`/`file:` secrets + typed snippet generator    | **Shipped**   |
 | 1b    | SQLite via `rusqlite`, relation follow, API-backed list/get, Leptos+Trunk UI, dev CORS                | **Shipped**   |
 | 1c    | Typed relation-picker in the UI, polish on the drawer, JSON field editors                            | Pending       |
-| 2     | `studio eject` + bundled UI via `rust-embed` (single-binary distribution)                            | Pending       |
+| 2     | `studio eject` (writable fork of the UI) + `embed-ui` cargo feature (single-binary distribution)      | **Shipped**   |
 | 3     | Write path: create / edit / delete with policy validation                                            | Pending       |
 | 4     | SQL preview, drift, CSV/JSON export, schema search, audit log                                        | Pending       |

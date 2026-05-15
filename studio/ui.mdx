@@ -12,11 +12,15 @@ maps one-to-one to a JSON endpoint.
 
 <Note>
 Phase 1b ships the UI as a sibling crate at
-`crates/cratestack-studio/ui/` in the framework repo. The Studio
-binary doesn't bundle it yet — run the UI from a development Trunk
-server pointed at a running `cratestack studio` backend. Phase 2 adds
-the single-binary bundle via `rust-embed`, and `studio eject` writes
-the same sources to a customizable workspace.
+`crates/cratestack-studio/ui/` in the framework repo. The two
+development paths below run it through a Trunk dev server alongside
+`cratestack studio run`.
+
+Phase 2 adds two ways to take the UI with you when you're done
+iterating: the [`embed-ui` cargo feature](./eject#bundle-the-ui-into-the-binary)
+bundles the SPA into the Studio binary so you can hand `cratestack` to
+a colleague, and [`cratestack studio eject`](./eject#eject-the-ui-sources)
+writes the sources to a writable directory you can fork.
 </Note>
 
 ## Running the UI locally
@@ -121,6 +125,6 @@ proxy in place.
   pass-through. Phase 3.
 - **SQL preview and query plan / drift indicators.** Phase 4.
 
-The UI itself is plain Leptos CSR — fork it via `cratestack studio
-eject` (Phase 2) if you need to customize the visual style or wire in
-proprietary actions ahead of the upstream's schedule.
+The UI itself is plain Leptos CSR — fork it via
+[`cratestack studio eject`](./eject) if you need to customize the visual
+style or wire in proprietary actions ahead of the upstream's schedule.
