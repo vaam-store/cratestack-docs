@@ -66,6 +66,20 @@ Two implicit checks run alongside:
 - `TYPE_MISMATCH` — the JSON value's type doesn't line up with the
   field's declared scalar (e.g. an `Int` field got a string).
 
+Phase 4 adds two more, surfaced from the driver layer once the SQL
+hits the database:
+
+- `UNIQUE` — Postgres SQLSTATE `23505` or SQLite
+  `SQLITE_CONSTRAINT_UNIQUE` / `…_PRIMARYKEY` returned for the write.
+- `FOREIGN_KEY` — Postgres `23503` or SQLite `…_FOREIGNKEY`.
+
+These come back through the same `422 VALIDATION_ERROR` envelope as
+the other codes, so the UI can drop the message next to the input
+that broke. Postgres `22001` (string truncation) maps to `LENGTH`,
+`22P02` (invalid text representation) to `TYPE_MISMATCH`, and `23514`
+(check violation) / SQLite `…_CHECK` to `REGEX`. Unrecognized driver
+errors still surface as `DATABASE_ERROR` (500).
+
 Failures roll up into a single **422 VALIDATION_ERROR** response with
 the `error.fields` array populated:
 

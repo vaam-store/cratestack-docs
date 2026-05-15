@@ -79,6 +79,7 @@
           "studio/quickstart",
           "studio/read-api",
           "studio/write-api",
+          "studio/tools",
           "studio/ui",
           "studio/eject"
         ]
