@@ -82,10 +82,9 @@ in the drawer and click **Follow**. The result panel below shows:
 If the field doesn't exist or isn't a relation, the panel surfaces
 the API's error message.
 
-<Note>
-The current input is a free text box. A typed dropdown that reads
-the model's relation field list lands in Phase 1c.
-</Note>
+The relation picker is a typed dropdown built from the model's
+relation fields. Labels show `<field> → <target> (<arity>)` so you
+can pick the right traversal without leaving the drawer.
 
 ### Copy Rust query
 
@@ -117,12 +116,45 @@ The Trunk dev server's `[[proxy]]` block forwards `/api/*` to the
 backend, which also avoids the cross-origin hop when you keep the
 proxy in place.
 
+## Writing data (RW targets)
+
+On targets with `mode = "rw"` the UI exposes three additional flows.
+
+### `+ New` button
+
+Above the records table on RW targets: a `+ New` button opens an
+inline form with one input per writable field. Submitting calls
+`POST /api/targets/:key/models/:m/records`. Per-field validation
+errors surface inline (see the
+[validators reference](./write-api#validators) for the full list).
+
+### Edit in the drawer
+
+Selecting a row and clicking **Edit** turns the drawer's field list
+into editable inputs. **Save** PATCHes the row; the API's response
+replaces the drawer's view. Validation errors from the server
+appear inline next to each field that failed.
+
+### Delete in the drawer
+
+A **Delete** button next to **Edit** confirms via
+`window.confirm()`, fires `DELETE …/records/:pk`, and clears the
+drawer on success.
+
+## Mode badge
+
+Each model header shows a small badge reflecting the target's mode:
+`RO` in slate, `RW` in green. Studio also hides the write buttons on
+RO targets — the badge is there to communicate intent before users
+click anything.
+
 ## What's not in the UI yet
 
-- **Field-typed relation picker.** Phase 1c.
-- **Per-field editors** (scalars, enums, dates, JSON). Phase 3.
-- **Create / update / delete actions** with policy-validation
-  pass-through. Phase 3.
+- **Typed pickers for enums.** Phase 1d. Today every input is a
+  single text box; you type enum values literally.
+- **Rich editors for JSON / DateTime / Decimal.** Phase 1d. JSON
+  values render pretty-printed in read mode but the edit input is
+  still a plain text box.
 - **SQL preview and query plan / drift indicators.** Phase 4.
 
 The UI itself is plain Leptos CSR — fork it via

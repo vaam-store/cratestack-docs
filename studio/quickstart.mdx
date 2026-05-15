@@ -16,15 +16,15 @@ Studio replaces the older `generate-studio` codegen scaffold from the
 see the [migration](#migration-from-generate-studio) section.
 
 <Warning>
-**Phase 2 (current)** makes Studio distributable:
-[`studio eject`](./eject#eject-the-ui-sources) writes the UI sources to
-a writable directory you can fork, and the
-[`embed-ui` cargo feature](./eject#bundle-the-ui-into-the-binary)
-bundles the SPA into the Studio binary so you can hand `cratestack`
-to a colleague without Trunk in the picture. The read API
-(Phase 1a/1b) is otherwise unchanged. Mutations land in Phase 3.
+**Phase 3 (current)** adds writes: `POST` / `PATCH` / `DELETE`
+record endpoints, server-side
+[validator pass-through](./write-api#validators) with structured
+per-field errors, and a `mode = "ro"` gate that returns
+**403 FORBIDDEN**. The UI gets a typed relation picker, an inline
+create form, an edit-in-place drawer, and a delete confirmation.
 
 Reference pages: [Studio Read API](./read-api),
+[Studio Write API](./write-api),
 [Studio UI](./ui), [Studio Eject](./eject).
 </Warning>
 
@@ -235,7 +235,10 @@ returns `NotImplemented`.
 | 0     | Skeleton: CLI, config loader, target validation, health endpoint                                     | **Shipped**   |
 | 1a    | Read API: six JSON endpoints + Postgres source + `env:`/`file:` secrets + typed snippet generator    | **Shipped**   |
 | 1b    | SQLite via `rusqlite`, relation follow, API-backed list/get, Leptos+Trunk UI, dev CORS                | **Shipped**   |
-| 1c    | Typed relation-picker in the UI, polish on the drawer, JSON field editors                            | Pending       |
+| 1c    | Typed relation picker in the UI, drawer polish, JSON viewer                                          | **Shipped**   |
 | 2     | `studio eject` (writable fork of the UI) + `embed-ui` cargo feature (single-binary distribution)      | **Shipped**   |
+| 3     | Write API: POST / PATCH / DELETE, validator pass-through, mode gate, inline create/edit/delete UI    | **Shipped**   |
+| 1d    | Typed pickers for enums, rich editors for JSON / DateTime / Decimal in the create + edit forms       | Pending       |
+| 4     | SQL preview, drift, CSV/JSON export, schema search, audit log, SQLSTATE → VALIDATION_ERROR mapping   | Pending       |
 | 3     | Write path: create / edit / delete with policy validation                                            | Pending       |
 | 4     | SQL preview, drift, CSV/JSON export, schema search, audit log                                        | Pending       |
