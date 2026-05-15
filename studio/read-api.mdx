@@ -1,0 +1,186 @@
+---
+title: Studio Read API
+description: The HTTP surface Studio exposes for browsing schemas and records. Stable contract used by the Leptos UI and any external tool.
+---
+
+# Studio Read API
+
+Once `cratestack studio run` is up, Studio serves a stable JSON API
+over the bind address (default `127.0.0.1:7878`). The Leptos UI in
+Phase 1b is one consumer; you can hit the same endpoints from a
+script, a notebook, or your own tool.
+
+All responses are JSON. All error responses use the same envelope:
+
+```json
+{ "error": { "code": "UNKNOWN_TARGET", "message": "unknown target 'foo'" } }
+```
+
+Stable codes: `UNKNOWN_TARGET`, `UNKNOWN_MODEL`, `NO_PRIMARY_KEY`,
+`INVALID_PRIMARY_KEY`, `UNSUPPORTED`, `DATABASE_ERROR`,
+`UPSTREAM_ERROR`.
+
+<Note>
+This page documents Phase 1a, which is **Postgres-only**. SQLite
+targets land in Phase 1b. API-only targets work for the schema/snippet
+endpoints; their `list`/`get` paths return `501 UNSUPPORTED` until
+Phase 1b.
+</Note>
+
+## Endpoints
+
+### `GET /api/targets`
+
+```json
+{
+  "workspace": "platform",
+  "targets": [
+    {
+      "key": "catalog",
+      "display_name": "Catalog",
+      "mode": "rw",
+      "has_db": true,
+      "has_api": false
+    }
+  ]
+}
+```
+
+### `GET /api/targets/:key/schema`
+
+Returns an [`OwnedSchemaSummary`](https://rust-doc.cratestack.dev/cratestack_core/struct.OwnedSchemaSummary.html) —
+parsed mixins, models, types, enums, and procedures by name.
+
+### `GET /api/targets/:key/models`
+
+Same models, but with per-field detail and primary-key resolution.
+
+```json
+{
+  "models": [
+    {
+      "name": "Post",
+      "primary_key": "id",
+      "fields": [
+        { "name": "id", "type_name": "String", "arity": "required", "is_id": true, "is_relation": false },
+        { "name": "title", "type_name": "String", "arity": "required", "is_id": false, "is_relation": false }
+      ]
+    }
+  ]
+}
+```
+
+`is_relation` is `true` when the field's declared type names another
+model in the same schema (the relation-follow endpoint lands in Phase
+1b).
+
+### `GET /api/targets/:key/models/:model/records`
+
+Cursor-paginated list of rows. Query params:
+
+| Param    | Type     | Default | Notes                                 |
+| -------- | -------- | ------- | ------------------------------------- |
+| `cursor` | string   | none    | Pass back what `next_cursor` returned |
+| `limit`  | integer  | 50      | Hard cap of 500                       |
+
+```json
+{
+  "rows": [
+    { "id": "abc", "title": "Hello", "body": null }
+  ],
+  "next_cursor": "abc"
+}
+```
+
+`next_cursor` is `null` when the page didn't fill — i.e. you've hit
+the end. Rows are ordered by primary key ascending; the cursor is the
+last seen `@id` value, serialized as a text-shaped reference that
+Studio binds and casts in SQL.
+
+### `GET /api/targets/:key/models/:model/records/:pk`
+
+Single row by primary-key value. 404 with `INVALID_PRIMARY_KEY` if no
+row matches.
+
+```json
+{
+  "row": { "id": "abc", "title": "Hello", "body": null }
+}
+```
+
+### `GET /api/targets/:key/models/:model/snippet?pk=…`
+
+The "copy Rust query" generator. Returns a ready-to-paste
+`find_unique` call against the macro delegate:
+
+```json
+{
+  "rust": "let row = cool.post()\n    .find_unique(\"abc-123\".to_owned())\n    .run(&ctx)\n    .await?;\n"
+}
+```
+
+Primary-key literals are typed:
+
+- **`String` / `Cuid` / `Uuid` / `Decimal`** → `"value".to_owned()`,
+  with quotes and backslashes escaped.
+- **`Int`** → `42_i64`.
+
+Other primary-key scalars (`DateTime`, `Bytes`, etc.) return `501
+UNSUPPORTED` in Phase 1a.
+
+## Errors
+
+| HTTP | Code                  | When                                                                                  |
+| ---- | --------------------- | ------------------------------------------------------------------------------------- |
+| 400  | `INVALID_PRIMARY_KEY` | The PK in the URL didn't match a row, or wasn't valid for the model's `@id` type.     |
+| 400  | `NO_PRIMARY_KEY`      | The model has no `@id` field. Studio v0 requires one.                                 |
+| 404  | `UNKNOWN_TARGET`      | The `:key` segment doesn't match a `[[target]]` in `studio.toml`.                     |
+| 404  | `UNKNOWN_MODEL`       | The `:model` segment isn't declared in the target's `.cstack`.                        |
+| 501  | `UNSUPPORTED`         | API-backed `list`/`get` (Phase 1a placeholder), or an unsupported PK scalar type.     |
+| 500  | `DATABASE_ERROR`      | sqlx error talking to the target's Postgres pool. The message is the underlying text. |
+| 502  | `UPSTREAM_ERROR`      | (Phase 1b) HTTP failure talking to a deployed cratestack service.                     |
+
+## Cursor pagination in practice
+
+The cursor is opaque, but the model is straightforward: it's the PK
+value of the last row in the page, encoded as a string.
+
+```bash
+# First page
+curl 'http://127.0.0.1:7878/api/targets/catalog/models/Post/records?limit=100'
+# -> { "rows": [...], "next_cursor": "post_99" }
+
+# Next page
+curl 'http://127.0.0.1:7878/api/targets/catalog/models/Post/records?limit=100&cursor=post_99'
+```
+
+When `next_cursor` is `null`, you've hit the end.
+
+## Secrets in `studio.toml`
+
+Phase 1a resolves two reference forms on boot:
+
+```toml
+[target.db]
+url = "env:CATALOG_DB_URL"           # reads $CATALOG_DB_URL
+driver = "postgres"
+
+[target.api.auth]
+kind = "bearer"
+token = "file:/run/secrets/catalog"  # reads & trims the file's contents
+```
+
+Unset env vars and missing files raise a `MissingEnv` / `SecretFile`
+error at load time, and the error message names the bad config field
+so you don't have to grep your `studio.toml` for which `env:` line
+broke.
+
+## What's not here yet
+
+- **Relation follow** — `/records/:pk/rel/:f` is wired in Phase 1b
+  alongside the Leptos UI.
+- **SQLite targets** — Phase 1b adds a `rusqlite`-backed source so
+  Studio can talk to `cratestack-rusqlite` schemas without the
+  workspace-wide `libsqlite3-sys` conflict.
+- **Mutations** — create / update / delete plus validation error
+  pass-through land in Phase 3.
