@@ -1,0 +1,126 @@
+---
+title: Studio UI
+description: The Leptos+Trunk web UI that consumes Studio's read API. Browse targets, paginate records, follow relations, copy Rust queries.
+---
+
+# Studio UI
+
+CrateStack Studio ships a browser-based UI built with Leptos and
+served by Trunk. It's a thin CSR app that consumes the
+[read API](./read-api) — every action you can do in the browser
+maps one-to-one to a JSON endpoint.
+
+<Note>
+Phase 1b ships the UI as a sibling crate at
+`crates/cratestack-studio/ui/` in the framework repo. The Studio
+binary doesn't bundle it yet — run the UI from a development Trunk
+server pointed at a running `cratestack studio` backend. Phase 2 adds
+the single-binary bundle via `rust-embed`, and `studio eject` writes
+the same sources to a customizable workspace.
+</Note>
+
+## Running the UI locally
+
+You'll need two terminals — one for the Studio backend, one for the
+Trunk dev server.
+
+```bash
+# Terminal 1 — backend
+cratestack studio run        # binds 127.0.0.1:7878
+
+# Terminal 2 — UI
+cd crates/cratestack-studio/ui
+trunk serve                  # serves the SPA on 127.0.0.1:8080
+```
+
+Open `http://127.0.0.1:8080`. Trunk's `[[proxy]]` block in
+`Trunk.toml` forwards `/api/*` to the backend, so the browser sees a
+single origin.
+
+### Prerequisites
+
+```bash
+# Trunk and the wasm target
+cargo install trunk
+rustup target add wasm32-unknown-unknown
+```
+
+Trunk itself fetches `wasm-bindgen` and any other tooling on first
+build. Tailwind is pulled from a CDN in `index.html`, so there's no
+Node toolchain in the picture.
+
+## What the UI shows you
+
+The UI is one page, four panes:
+
+| Pane             | What it does                                                                                          |
+| ---------------- | ----------------------------------------------------------------------------------------------------- |
+| Header           | Workspace name + target switcher. Each option shows the mode (`ro`/`rw`) and capability (`db`/`api`). |
+| Left sidebar     | Models in the selected target's schema, clickable.                                                    |
+| Main pane        | Records table for the selected model, with cursor-based pagination (Previous / Next).                 |
+| Right drawer     | Selected row's fields, a relation-follow input, and a "Copy Rust query" button.                       |
+
+### Pagination
+
+The Previous / Next buttons stack cursors locally so navigation is
+stateless on the server side. `Next` is disabled when the API's
+`next_cursor` is `null` (you've hit the end). `Previous` is disabled
+on the first page.
+
+### Following relations
+
+Type a relation field name (`author`, `posts`, etc.) into the input
+in the drawer and click **Follow**. The result panel below shows:
+
+- A single related row (for `Required`-arity fields like `Post.author`).
+- A page of related rows (for `List`-arity fields like `Customer.posts`).
+
+If the field doesn't exist or isn't a relation, the panel surfaces
+the API's error message.
+
+<Note>
+The current input is a free text box. A typed dropdown that reads
+the model's relation field list lands in Phase 1c.
+</Note>
+
+### Copy Rust query
+
+The drawer's **Copy Rust query** button calls
+`/api/targets/:key/models/:m/snippet?pk=…` and writes the returned
+`find_unique` snippet to the system clipboard using the browser's
+Clipboard API. Same shape as the rest of the snippet endpoint:
+
+- `String`/`Cuid`/`Uuid`/`Decimal` IDs render as `"value".to_owned()`,
+- `Int` IDs as `42_i64`.
+
+The snippet appears in a code block below the button so you can also
+hand-copy.
+
+## CORS in dev
+
+The UI runs on `127.0.0.1:8080`; the backend on `127.0.0.1:7878`. To
+let the browser cross those origins, Studio enables a permissive
+CORS layer by default. Disable it in `studio.toml` when binding to a
+wider interface:
+
+```toml
+[workspace]
+name = "studio"
+cors_dev = false             # default is `true`
+```
+
+The Trunk dev server's `[[proxy]]` block forwards `/api/*` to the
+backend, which also avoids the cross-origin hop when you keep the
+proxy in place.
+
+## What's not in the UI yet
+
+- **Field-typed relation picker.** Phase 1c.
+- **Per-field editors** (scalars, enums, dates, JSON). Phase 3.
+- **Create / update / delete actions** with policy-validation
+  pass-through. Phase 3.
+- **SQL preview and query plan / drift indicators.** Phase 4.
+
+The UI itself is plain Leptos CSR — fork it via `cratestack studio
+eject` (Phase 2) if you need to customize the visual style or wire in
+proprietary actions ahead of the upstream's schedule.

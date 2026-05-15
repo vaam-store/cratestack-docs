@@ -77,7 +77,8 @@
         "group": "Studio",
         "pages": [
           "studio/quickstart",
-          "studio/read-api"
+          "studio/read-api",
+          "studio/ui"
         ]
       },
       {

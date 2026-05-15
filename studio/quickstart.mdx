@@ -16,14 +16,14 @@ Studio replaces the older `generate-studio` codegen scaffold from the
 see the [migration](#migration-from-generate-studio) section.
 
 <Warning>
-Studio is shipping in phases. **Phase 1a (current)** wires the read API
-— browse models, paginate records, fetch by primary key, and grab a
-Rust find_unique snippet. The Leptos UI lands in Phase 1b alongside
-SQLite support and relation-follow. Mutations come in Phase 3.
+**Phase 1b (current)** completes Studio's read story: SQLite via
+`rusqlite`, relation traversal (`/records/:pk/rel/:field`), API-backed
+list/get against deployed cratestack services, and a Leptos+Trunk web
+UI you can run locally. Mutations land in Phase 3.
 
 The endpoints are documented in detail in
-[Studio Read API](./read-api). Phase 1a is Postgres-only — see the
-[scope notes](./read-api#whats-not-here-yet) for the SQLite follow-up.
+[Studio Read API](./read-api), and the browser UI in
+[Studio UI](./ui).
 </Warning>
 
 ## 1. Install The CLI
@@ -67,8 +67,8 @@ mode = "rw"                     # overrides workspace default for this target
 
 [target.db]
 url = "env:CATALOG_DB_URL"      # `env:NAME` resolves at boot; literals also work
-driver = "postgres"             # "postgres" | "sqlite" | "mysql"
-max_connections = 5
+driver = "postgres"             # "postgres" (sqlx) or "sqlite" (rusqlite)
+max_connections = 5             # Postgres only; SQLite uses a single connection
 
 [target.api]
 base_url = "https://catalog.internal"
@@ -141,7 +141,33 @@ base_url = "https://inventory.internal"
 auth = { kind = "bearer", token = "env:INVENTORY_TOKEN" }
 ```
 
-Each target gets its own entry in the UI's target switcher (Phase 1).
+Each target gets its own entry in the UI's target switcher.
+
+### SQLite targets
+
+Studio talks to SQLite databases through `rusqlite`. The `url` accepts
+`sqlite:`, `sqlite://`, `sqlite::memory:`, and bare file paths.
+
+```toml
+[[target]]
+key = "embedded"
+schema = "schemas/embedded.cstack"
+
+[target.db]
+url = "sqlite:./local-state.db"
+driver = "sqlite"
+
+[[target]]
+key = "scratch"
+schema = "schemas/scratch.cstack"
+
+[target.db]
+url = "sqlite::memory:"
+driver = "sqlite"
+```
+
+Studio uses `rusqlite` rather than `sqlx-sqlite` so it coexists with
+the rest of the framework's SQLite path (`cratestack-rusqlite`).
 
 ## Direct DB vs deployed service
 
@@ -206,7 +232,8 @@ returns `NotImplemented`.
 | ----- | ---------------------------------------------------------------------------------------------------- | ------------- |
 | 0     | Skeleton: CLI, config loader, target validation, health endpoint                                     | **Shipped**   |
 | 1a    | Read API: six JSON endpoints + Postgres source + `env:`/`file:` secrets + typed snippet generator    | **Shipped**   |
-| 1b    | Leptos UI, SQLite via `rusqlite`, relation follow, API-backed list/get                               | In progress   |
-| 2     | `studio eject` (copy Studio's own sources to a writable workspace)                                   | Pending       |
+| 1b    | SQLite via `rusqlite`, relation follow, API-backed list/get, Leptos+Trunk UI, dev CORS                | **Shipped**   |
+| 1c    | Typed relation-picker in the UI, polish on the drawer, JSON field editors                            | Pending       |
+| 2     | `studio eject` + bundled UI via `rust-embed` (single-binary distribution)                            | Pending       |
 | 3     | Write path: create / edit / delete with policy validation                                            | Pending       |
 | 4     | SQL preview, drift, CSV/JSON export, schema search, audit log                                        | Pending       |

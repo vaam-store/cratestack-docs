@@ -16,15 +16,14 @@ All responses are JSON. All error responses use the same envelope:
 { "error": { "code": "UNKNOWN_TARGET", "message": "unknown target 'foo'" } }
 ```
 
-Stable codes: `UNKNOWN_TARGET`, `UNKNOWN_MODEL`, `NO_PRIMARY_KEY`,
-`INVALID_PRIMARY_KEY`, `UNSUPPORTED`, `DATABASE_ERROR`,
-`UPSTREAM_ERROR`.
+Stable codes: `UNKNOWN_TARGET`, `UNKNOWN_MODEL`, `UNKNOWN_FIELD`,
+`NOT_A_RELATION`, `NO_PRIMARY_KEY`, `INVALID_PRIMARY_KEY`, `UNSUPPORTED`,
+`DATABASE_ERROR`, `UPSTREAM_ERROR`, `INTERNAL_ERROR`.
 
 <Note>
-This page documents Phase 1a, which is **Postgres-only**. SQLite
-targets land in Phase 1b. API-only targets work for the schema/snippet
-endpoints; their `list`/`get` paths return `501 UNSUPPORTED` until
-Phase 1b.
+Phase 1b adds SQLite drivers (via `rusqlite`), relation follow, and
+API-backed list/get. Many-to-many through a junction table still
+returns `UNSUPPORTED`.
 </Note>
 
 ## Endpoints
@@ -108,6 +107,47 @@ row matches.
 }
 ```
 
+### `GET /api/targets/:key/models/:model/records/:pk/rel/:field`
+
+Follow a `@relation` field from a specific row. The response shape
+depends on the field's arity:
+
+- **List arity** (`posts Post[] @relation(...)`) — returns a paginated
+  page (same shape as `/records`), with cursor-based pagination on the
+  target model's primary key.
+
+  ```json
+  {
+    "rows": [
+      { "id": "p1", "authorId": 1, "title": "first" },
+      { "id": "p2", "authorId": 1, "title": "second" }
+    ],
+    "next_cursor": null
+  }
+  ```
+
+- **Required / Optional arity** (`author User @relation(...)`) —
+  returns a single optional row.
+
+  ```json
+  { "row": { "id": 1, "email": "alice@example.com" } }
+  ```
+
+The resolver reads `@relation(fields: [SRC], references: [TGT])` on
+the source field. CrateStack's parser requires `@relation` on **both**
+sides of a relation, which lets Studio treat both directions uniformly:
+the target table is filtered on `references[0]`, and the bound value
+comes from the source row's `fields[0]`.
+
+Errors specific to this endpoint:
+
+- `404 UNKNOWN_FIELD` — the `:field` segment isn't a field on `:model`.
+- `400 NOT_A_RELATION` — the field exists but isn't typed as another
+  model.
+- `501 UNSUPPORTED` against an `[target.api]` target — the generated
+  REST surface doesn't expose arbitrary column filters, so relation
+  traversal needs a `[target.db]` block.
+
 ### `GET /api/targets/:key/models/:model/snippet?pk=…`
 
 The "copy Rust query" generator. Returns a ready-to-paste
@@ -130,15 +170,18 @@ UNSUPPORTED` in Phase 1a.
 
 ## Errors
 
-| HTTP | Code                  | When                                                                                  |
-| ---- | --------------------- | ------------------------------------------------------------------------------------- |
-| 400  | `INVALID_PRIMARY_KEY` | The PK in the URL didn't match a row, or wasn't valid for the model's `@id` type.     |
-| 400  | `NO_PRIMARY_KEY`      | The model has no `@id` field. Studio v0 requires one.                                 |
-| 404  | `UNKNOWN_TARGET`      | The `:key` segment doesn't match a `[[target]]` in `studio.toml`.                     |
-| 404  | `UNKNOWN_MODEL`       | The `:model` segment isn't declared in the target's `.cstack`.                        |
-| 501  | `UNSUPPORTED`         | API-backed `list`/`get` (Phase 1a placeholder), or an unsupported PK scalar type.     |
-| 500  | `DATABASE_ERROR`      | sqlx error talking to the target's Postgres pool. The message is the underlying text. |
-| 502  | `UPSTREAM_ERROR`      | (Phase 1b) HTTP failure talking to a deployed cratestack service.                     |
+| HTTP | Code                  | When                                                                                                                  |
+| ---- | --------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 400  | `INVALID_PRIMARY_KEY` | The PK in the URL didn't match a row, or wasn't valid for the model's `@id` type.                                     |
+| 400  | `NO_PRIMARY_KEY`      | The model has no `@id` field. Studio v0 requires one.                                                                 |
+| 400  | `NOT_A_RELATION`      | The `:field` segment on `/rel/:field` exists but isn't typed as another model.                                        |
+| 404  | `UNKNOWN_TARGET`      | The `:key` segment doesn't match a `[[target]]` in `studio.toml`.                                                     |
+| 404  | `UNKNOWN_MODEL`       | The `:model` segment isn't declared in the target's `.cstack`.                                                        |
+| 404  | `UNKNOWN_FIELD`       | The `:field` segment on `/rel/:field` doesn't exist on the model.                                                     |
+| 501  | `UNSUPPORTED`         | Unsupported PK scalar, relation follow against API targets, many-to-many junctions, or another operation Studio can't service. |
+| 500  | `DATABASE_ERROR`      | sqlx or rusqlite error talking to the target's database. Message is the underlying driver text.                       |
+| 500  | `INTERNAL_ERROR`      | SQLite blocking-task panic. Should never fire under normal operation; if it does, please report a bug.                |
+| 502  | `UPSTREAM_ERROR`      | HTTP failure talking to a deployed cratestack service (network error, non-success status, malformed body).            |
 
 ## Cursor pagination in practice
 
@@ -177,10 +220,18 @@ broke.
 
 ## What's not here yet
 
-- **Relation follow** — `/records/:pk/rel/:f` is wired in Phase 1b
-  alongside the Leptos UI.
-- **SQLite targets** — Phase 1b adds a `rusqlite`-backed source so
-  Studio can talk to `cratestack-rusqlite` schemas without the
-  workspace-wide `libsqlite3-sys` conflict.
-- **Mutations** — create / update / delete plus validation error
-  pass-through land in Phase 3.
+- **Many-to-many** through a junction table returns `UNSUPPORTED`.
+  Phase 2 widens relation resolution.
+- **Relation follow against API targets** returns `UNSUPPORTED` — the
+  generated REST surface doesn't expose arbitrary column filters, so
+  the target needs a `[target.db]` block for traversal.
+- **Mutations** (create / update / delete with policy-validation
+  pass-through) land in Phase 3.
+
+## Driver coverage
+
+| Driver     | List | Get | Follow | Notes                                                                                      |
+| ---------- | ---- | --- | ------ | ------------------------------------------------------------------------------------------ |
+| Postgres   | ✅    | ✅   | ✅      | Via sqlx with `row_to_json` projection.                                                    |
+| SQLite     | ✅    | ✅   | ✅      | Via `rusqlite` with `json_object(...)` projection. Sidesteps the `libsqlite3-sys` conflict. |
+| Deployed API | ✅  | ✅   | ❌      | Talks to the service's generated `/api/<plural-snake>` REST routes. Follow is `UNSUPPORTED`. |
