@@ -78,6 +78,7 @@
         "pages": [
           "studio/quickstart",
           "studio/read-api",
+          "studio/write-api",
           "studio/ui",
           "studio/eject"
         ]

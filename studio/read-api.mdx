@@ -18,7 +18,10 @@ All responses are JSON. All error responses use the same envelope:
 
 Stable codes: `UNKNOWN_TARGET`, `UNKNOWN_MODEL`, `UNKNOWN_FIELD`,
 `NOT_A_RELATION`, `NO_PRIMARY_KEY`, `INVALID_PRIMARY_KEY`, `UNSUPPORTED`,
-`DATABASE_ERROR`, `UPSTREAM_ERROR`, `INTERNAL_ERROR`.
+`FORBIDDEN`, `VALIDATION_ERROR`, `DATABASE_ERROR`, `UPSTREAM_ERROR`,
+`INTERNAL_ERROR`. Writes use the Phase 3 codes (`FORBIDDEN`,
+`VALIDATION_ERROR`); see the [write API](./write-api) page for the
+mutation surface.
 
 <Note>
 Phase 1b adds SQLite drivers (via `rusqlite`), relation follow, and

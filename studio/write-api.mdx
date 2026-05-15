@@ -1,0 +1,175 @@
+---
+title: Studio Write API
+description: Create, update, and delete records through Studio. Server-side validators, structured per-field errors, and the read-only mode gate.
+---
+
+# Studio Write API
+
+Phase 3 adds three endpoints on top of the
+[read API](./read-api). They share its URL shape, error envelope,
+and authentication conventions — the only new ingredients are HTTP
+methods, request bodies, and a structured validation envelope.
+
+| Method | Path                                                       | Returns                  |
+| ------ | ---------------------------------------------------------- | ------------------------ |
+| POST   | `/api/targets/:key/models/:model/records`                  | `201` + `{ "row": {…} }` |
+| PATCH  | `/api/targets/:key/models/:model/records/:pk`              | `200` + `{ "row": {…} }` |
+| DELETE | `/api/targets/:key/models/:model/records/:pk`              | `200` + `{ "row": {…} }` |
+
+The DELETE response echoes the deleted row's columns so clients
+don't need a follow-up GET to confirm what was removed.
+
+## The mode gate
+
+Studio's `studio.toml` declares each target's mode:
+
+```toml
+[[target]]
+key = "audit"
+schema = "schemas/audit.cstack"
+mode = "ro"                  # write requests on this target return 403
+
+[[target]]
+key = "scratch"
+schema = "schemas/scratch.cstack"
+mode = "rw"                  # writes allowed
+```
+
+A write request against a `ro` target returns **403 FORBIDDEN** with
+the new `FORBIDDEN` error code. The gate runs before the data source
+is touched — there's no way for a request to leak past it into the
+database.
+
+The default mode is `ro`, so writes are opt-in per target.
+
+## Validators
+
+Studio mirrors the framework's
+[macro-side validators](../guides/validators) server-side. Before any
+SQL runs, the request payload is checked against every validator
+attribute on the model's fields:
+
+| Attribute        | Code             | Checked against         |
+| ---------------- | ---------------- | ----------------------- |
+| `@email`         | `EMAIL`          | String fields           |
+| `@length(min:, max:)` | `LENGTH`    | String / Bytes fields   |
+| `@range(min:, max:)`  | `RANGE`     | Int / Decimal fields    |
+| `@regex("…")`    | `REGEX`          | String fields           |
+| `@uri`           | `URI`            | String fields           |
+| `@iso4217`       | `ISO4217`        | String fields           |
+
+Two implicit checks run alongside:
+
+- `REQUIRED` — a required, non-defaulted, non-`@id` field is missing
+  or `null` in a CREATE payload (or `null` on a non-Optional field in
+  an UPDATE).
+- `TYPE_MISMATCH` — the JSON value's type doesn't line up with the
+  field's declared scalar (e.g. an `Int` field got a string).
+
+Failures roll up into a single **422 VALIDATION_ERROR** response with
+the `error.fields` array populated:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "payload failed validation",
+    "fields": [
+      { "field": "title",      "code": "LENGTH", "message": "field 'title' must be at least 3 characters long" },
+      { "field": "authorEmail","code": "EMAIL",  "message": "field 'authorEmail' is not a valid email address" }
+    ]
+  }
+}
+```
+
+`error.fields` is **omitted entirely** on non-validation errors, so
+the existing error contract is unchanged.
+
+## CREATE — `POST …/records`
+
+```bash
+curl -X POST 'http://127.0.0.1:7878/api/targets/blog/models/Post/records' \
+  -H 'content-type: application/json' \
+  -d '{
+    "id": "p2",
+    "title": "freshly created",
+    "authorEmail": "bob@example.com"
+  }'
+# 201 Created
+# { "row": { "id": "p2", "title": "freshly created", "authorEmail": "bob@example.com" } }
+```
+
+Body shape: a JSON object with one key per writable field (anything
+that isn't a relation or a list-typed field).
+
+`@id` fields are required unless the schema declares
+`@default(dbgenerated())`. Generated defaults like `createdAt`
+populated by the database are visible in the response row.
+
+## UPDATE — `PATCH …/records/:pk`
+
+```bash
+curl -X PATCH 'http://127.0.0.1:7878/api/targets/blog/models/Post/records/p1' \
+  -H 'content-type: application/json' \
+  -d '{ "title": "Updated title" }'
+# 200 OK
+# { "row": { "id": "p1", "title": "Updated title", "authorEmail": "alice@example.com" } }
+```
+
+Body shape: a partial JSON object — only fields you want to change.
+Missing keys preserve their current value. Sending `null` on a
+non-Optional field returns a `REQUIRED` validation error.
+
+If no row matches `:pk`, the response is **400 INVALID_PRIMARY_KEY**.
+
+## DELETE — `DELETE …/records/:pk`
+
+```bash
+curl -X DELETE 'http://127.0.0.1:7878/api/targets/blog/models/Post/records/p2'
+# 200 OK
+# { "row": { "id": "p2", "title": "freshly created", "authorEmail": "bob@example.com" } }
+```
+
+Returns the deleted row (the API source returns an empty `{ "row":
+{} }` if the upstream service uses `204 No Content` semantics). A
+second DELETE against the same PK returns **400 INVALID_PRIMARY_KEY**.
+
+## Error codes (Phase 3 additions)
+
+| HTTP | Code               | When                                                                                                                |
+| ---- | ------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| 403  | `FORBIDDEN`        | Target is read-only (`mode = "ro"`) and the request was a write.                                                    |
+| 422  | `VALIDATION_ERROR` | One or more field-level validators (or `REQUIRED` / `TYPE_MISMATCH`) rejected the payload. Per-field detail in `error.fields`. |
+
+These join Phase 1b's set: `UNKNOWN_TARGET`, `UNKNOWN_MODEL`,
+`UNKNOWN_FIELD`, `NOT_A_RELATION`, `NO_PRIMARY_KEY`,
+`INVALID_PRIMARY_KEY`, `UNSUPPORTED`, `DATABASE_ERROR`, `UPSTREAM_ERROR`,
+`INTERNAL_ERROR`.
+
+## Driver behavior
+
+| Driver       | CREATE | UPDATE | DELETE | Notes                                                                                                            |
+| ------------ | ------ | ------ | ------ | ---------------------------------------------------------------------------------------------------------------- |
+| Postgres     | ✅      | ✅      | ✅      | `INSERT/UPDATE/DELETE … RETURNING *` wrapped in `row_to_json`. Binds are typed per the field's declared scalar.   |
+| SQLite       | ✅      | ✅      | ✅      | `RETURNING json_object(…)`. Values land via rusqlite's typed Value enum.                                          |
+| Deployed API | ✅      | ✅      | ✅      | Forwards POST / PATCH / DELETE to the upstream's generated `/api/<plural-snake-model>` routes. Upstream auth and policy still apply. |
+
+Constraint-level failures (UNIQUE, NOT NULL, CHECK) that slip past
+Studio's validators still surface as **500 DATABASE_ERROR** with the
+underlying driver text. Mapping known SQLSTATE codes to friendlier
+validation envelopes is Phase 4.
+
+## What the UI does with this
+
+The [Studio UI](./ui) wires these endpoints into three flows on RW
+targets:
+
+- **`+ New`** above the records table opens an inline form with one
+  input per writable field. Per-field validation errors surface inline.
+- **Edit** in the record drawer turns the field list into editable
+  inputs. Save calls PATCH; per-field errors render in place.
+- **Delete** in the drawer confirms via `window.confirm()` and fires
+  DELETE on accept.
+
+The mode badge (`RO` / `RW`) next to the model header lets users see
+at a glance whether edits are allowed before they click anything.
