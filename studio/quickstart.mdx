@@ -1,0 +1,206 @@
+---
+title: Studio Quickstart
+description: Boot the CrateStack admin and testing surface against one or more .cstack schemas.
+---
+
+# Studio Quickstart
+
+CrateStack Studio is a single binary you launch locally to inspect data
+behind one or more `.cstack` schemas. You describe the workspace once in
+a `studio.toml` — schemas, database URLs, and (optionally) deployed
+service endpoints — and `cratestack studio run` serves a web UI against
+those targets.
+
+Studio replaces the older `generate-studio` codegen scaffold from the
+0.3.x line. If you were generating a Leptos+Axum project per schema set,
+see the [migration](#migration-from-generate-studio) section.
+
+<Warning>
+Studio is shipping in phases. **Phase 0 (current)** validates the config
+and serves a stub page with a `/api/health` endpoint. Browse / inspect /
+edit land in Phases 1–4 of the rewrite.
+</Warning>
+
+## 1. Install The CLI
+
+If you already have `cratestack` from the workspace build, you're set.
+Otherwise from a checkout of the framework repo:
+
+```bash
+cargo build -p cratestack-cli --bin cratestack
+```
+
+Verify:
+
+```bash
+cratestack studio --help
+```
+
+## 2. Seed `studio.toml`
+
+```bash
+cratestack studio init
+```
+
+This writes a starter `studio.toml` in the current directory. Pass
+`--out <dir>` to target a different directory; pass `--force` to
+overwrite an existing file.
+
+The starter file is heavily commented. The minimum a real target needs
+is a key, a schema path, and one of `[target.db]` / `[target.api]`:
+
+```toml
+[workspace]
+name = "acme"
+default_mode = "ro"             # "ro" | "rw" — applied when a target omits `mode`
+
+[[target]]
+key = "catalog"                 # URL-safe; used in routes and the target switcher
+display_name = "Catalog"
+schema = "schemas/catalog.cstack"
+mode = "rw"                     # overrides workspace default for this target
+
+[target.db]
+url = "env:CATALOG_DB_URL"      # `env:NAME` resolves at boot; literals also work
+driver = "postgres"             # "postgres" | "sqlite" | "mysql"
+max_connections = 5
+
+[target.api]
+base_url = "https://catalog.internal"
+auth = { kind = "bearer", token = "env:CATALOG_TOKEN" }
+prefer_for = ["procedures"]     # which operations to route here instead of the DB
+```
+
+A target with neither `[target.db]` nor `[target.api]` is rejected at
+load time — Studio has no other way to reach data.
+
+## 3. Run It
+
+```bash
+cratestack studio run
+```
+
+By default Studio binds to `127.0.0.1:7878`. Override with `--bind`:
+
+```bash
+cratestack studio run --config infra/studio.toml --bind 0.0.0.0:9000
+```
+
+While Studio is running:
+
+| Endpoint        | Phase 0 behavior                                                |
+| --------------- | --------------------------------------------------------------- |
+| `GET /`         | Stub page with a link to `/api/health`.                          |
+| `GET /api/health` | JSON: workspace name + per-target `has_db` / `has_api` / `mode`. |
+
+Quick smoke test:
+
+```bash
+curl http://127.0.0.1:7878/api/health
+# {"ok":true,"workspace":"acme","targets":[{"key":"catalog","has_db":true,"has_api":true,"mode":"rw"}]}
+```
+
+## 4. Multiple Schemas
+
+Studio is designed around multi-target workspaces — one `studio.toml`
+can describe every `.cstack` in a monorepo:
+
+```toml
+[workspace]
+name = "platform"
+default_mode = "ro"
+
+[[target]]
+key = "catalog"
+schema = "services/catalog-service/schema/catalog.cstack"
+[target.db]
+url = "env:CATALOG_DB_URL"
+driver = "postgres"
+
+[[target]]
+key = "accounts"
+schema = "services/accounts-service/schema/accounts.cstack"
+[target.db]
+url = "env:ACCOUNTS_DB_URL"
+driver = "postgres"
+
+[[target]]
+key = "inventory"
+schema = "services/inventory-service/schema/inventory.cstack"
+mode = "rw"
+[target.db]
+url = "env:INVENTORY_DB_URL"
+driver = "postgres"
+[target.api]
+base_url = "https://inventory.internal"
+auth = { kind = "bearer", token = "env:INVENTORY_TOKEN" }
+```
+
+Each target gets its own entry in the UI's target switcher (Phase 1).
+
+## Direct DB vs deployed service
+
+A target can declare a `[target.db]` block, a `[target.api]` block, or
+both:
+
+- **`[target.db]` only** — Studio opens its own sqlx pool. Best for
+  schemas without a running service, or when you want to bypass
+  application-level RBAC for debugging.
+- **`[target.api]` only** — Studio proxies through your deployed
+  CrateStack service. Same auth and policy the service enforces in
+  production. Pick this for shared environments where direct DB access
+  is undesirable.
+- **Both** — Studio uses the DB for browsing and routes procedures
+  (and anything in `prefer_for`) through the API. The DB pool is
+  read-only unless the target also has `mode = "rw"`.
+
+## Read-only vs read/write
+
+`mode` controls whether Studio renders edit affordances and accepts
+mutation calls for a target:
+
+- `"ro"` (workspace default) — list, paginate, follow relations, copy
+  generated Rust queries. No edit/delete UI. Mutation endpoints reject
+  with `403`.
+- `"rw"` — adds inline edits, create flows, delete confirmations, and
+  the validation-error pass-through from `cratestack-policy`. Lands in
+  Phase 3.
+
+Set the workspace default in `[workspace] default_mode`, then override
+per target via `mode = "..."`.
+
+## Migration from `generate-studio`
+
+If you were on the 0.3.x scaffold generator:
+
+1. Delete the generated `studio/` workspace from your repo — Studio is
+   no longer code you check in.
+2. Run `cratestack studio init` and translate your old flags into
+   `[[target]]` blocks. Roughly:
+
+   | Old flag                           | New `studio.toml` field                |
+   | ---------------------------------- | --------------------------------------- |
+   | `--schema <path>`                  | `target.schema`                         |
+   | `--service-url <url>`              | `target.api.base_url`                   |
+   | `--context <key>`                  | `target.key`                            |
+   | `--name <studio-name>`             | `workspace.name`                        |
+   | `--mount-path <path>`              | _(gone — Studio is its own server)_     |
+   | `--profile dev` / `--profile prod` | _(gone — runtime-only behavior now)_    |
+
+3. Add a `[target.db]` block if you want direct DB browsing. The old
+   generator's reverse-proxy mode mapped to `[target.api]` exclusively.
+
+If you forked the Leptos UI, you'll want to wait for Phase 2 — `cratestack
+studio eject --out ./fork` will then copy Studio's own sources into a
+workspace you can customize. In Phase 0 / 1 the `eject` subcommand
+returns `NotImplemented`.
+
+## Phase roadmap
+
+| Phase | Scope                                                                                       | Status        |
+| ----- | ------------------------------------------------------------------------------------------- | ------------- |
+| 0     | Skeleton: CLI, config loader, target validation, health endpoint                            | **Shipped**   |
+| 1     | v0 read path: schema, model list, paginated browse, record drawer, relation follow, snippet | In progress   |
+| 2     | `studio eject` (copy Studio's own sources to a writable workspace)                          | Pending       |
+| 3     | v1 write path: create / edit / delete with policy validation                                | Pending       |
+| 4     | v2: SQL preview, drift, CSV/JSON export, schema search, audit log                           | Pending       |
