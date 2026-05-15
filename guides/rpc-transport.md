@@ -156,6 +156,135 @@ The response is a stream of codec-encoded chunks, terminated by end-of-body. Wit
 
 SSE (`text/event-stream`) is wired in the codec layer and works the same way for clients that need EventSource compatibility.
 
+## Consuming streams
+
+The wire side is one paragraph; the interesting question is what a client looks like on the other end of that pipe. CrateStack ships three client paths and you can pick per-app or per-request.
+
+### The wire shape
+
+`application/cbor-seq` is a sequence of self-delimiting CBOR top-level items concatenated back-to-back — no envelope, no length prefix, no framing bytes between items. The server emits it from `reqwest`/`axum`'s `bytes_stream()` so the body flushes as items are produced; the response is never fully buffered on the wire. The URL is the same `POST /rpc/{op_id}` that serves unary; only `Accept: application/cbor-seq` (the codec's `sequence_accept_header_value()`) flips the response shape. Op kind is decided by the schema (`OpKind::Sequence` for list-return procedures and the model `list` verb), not by the request.
+
+### Path 1 — Rust client via `RpcClient::call_streaming`
+
+The typed Rust path. The method returns a bounded `tokio::sync::mpsc::Receiver` so memory stays tight: 16 in-flight items max, with backpressure flowing back through reqwest's chunk stream when the consumer falls behind.
+
+```rust
+use cratestack::client_rust::rpc::{RpcClient, RpcClientError};
+
+let mut rx = rpc_client
+    .call_streaming::<TicksArgs, Tick>("procedure.ticks", &TicksArgs { count: 100 })
+    .await?;
+
+while let Some(item) = rx.recv().await {
+    match item {
+        Ok(tick) => render(tick),
+        Err(RpcClientError::Remote(err)) => {
+            // Per-item error — terminal. The next recv() will return None.
+            eprintln!("server returned {}: {}", err.body.code, err.body.message);
+            break;
+        }
+        Err(other) => {
+            eprintln!("transport/decode error: {other}");
+            break;
+        }
+    }
+}
+```
+
+Two shape notes worth pinning down:
+
+1. **Non-2xx responses surface before the channel opens.** `call_streaming` returns `Err(RpcClientError)` from its `await`, not as the first channel item. The channel exists only after the server has accepted the request and started streaming.
+2. **Per-item errors are terminal.** Each `Err` in the channel is the last item; the pump task exits after sending it. Consumers don't need an inner loop guard — a single `while let Some(item) = rx.recv().await` covers happy path, transport mid-stream failure, and clean end-of-stream.
+
+### Path 2 — Flutter via callback + frb `StreamSink`
+
+The reqwest-in-Rust path for Flutter apps. `FlutterRuntime::rpc_call_streamed` takes a callback that returns `bool` (false cancels); the natural wrap with `flutter_rust_bridge` is a `StreamSink<FlutterChunkWire>` so Dart code consumes a regular `Stream`. The full Rust shim lives in [`cratestack-client-flutter/README.md`](https://github.com/cratestack/cratestack/blob/main/crates/cratestack-client-flutter/README.md); the gist:
+
+```rust
+use cratestack_client_flutter::{FlutterChunkWire, FlutterHeader, FlutterRuntime, FlutterRuntimeError};
+use flutter_rust_bridge::frb;
+
+#[frb(sync)]
+pub fn rpc_call_streamed(
+    runtime: &FlutterRuntime,
+    op_id: String,
+    input: Vec<u8>,
+    headers: Vec<FlutterHeader>,
+    sink: flutter_rust_bridge::StreamSink<FlutterChunkWire>,
+) -> Result<(), FlutterRuntimeError> {
+    runtime.rpc_call_streamed(&op_id, input, headers, move |chunk| sink.add(chunk).is_ok())
+}
+```
+
+On the Dart side one `switch` over `FlutterChunkWire` covers every termination path:
+
+```dart
+await for (final chunk in stream) {
+  switch (chunk) {
+    case FlutterChunkWire_Item(:final field0):
+      final tick = Tick.fromWire(cbor.cbor.decode(field0));
+      renderRow(tick);
+    case FlutterChunkWire_End():
+      break;
+    case FlutterChunkWire_Error(:final field0):
+      handleError(field0);
+      break;
+  }
+}
+```
+
+`Item` carries one CBOR-encoded item's raw bytes — decode it on the Dart side with the `cbor` package (or anything else that speaks CBOR). `End` and `Error` are both terminal: no further variants follow either.
+
+### Path 3 — Flutter via dio + `CborSeqStreamTransformer`
+
+For apps that want HTTP to live in Dart — native NSURLSession/OkHttp visibility, dio interceptors for auth/retry/idempotency, Flutter DevTools network inspection, system proxy and certificate pinning — the generated Dart RPC runtime ships two primitives:
+
+- `CborSeqDecoderHandle` — abstract interface; `Future<List<Uint8List>> feed(Uint8List)` plus `int pendingLen()`. The FFI-backed `FlutterCborSeqDecoder` (from `cratestack-client-flutter`) satisfies it; pure-Dart impls work for web or server-side Dart.
+- `CborSeqStreamTransformer` — a plain `StreamTransformer<Uint8List, Uint8List>` that wraps any decoder handle. Composes with anything that produces `Stream<Uint8List>`.
+
+```dart
+final decoder = FlutterCborSeqDecoder();
+final response = await dio.post<ResponseBody>(
+  '/rpc/$opId',
+  data: encodedInput,
+  options: Options(
+    responseType: ResponseType.stream,
+    contentType: 'application/cbor',
+    headers: {'Accept': 'application/cbor-seq'},
+  ),
+);
+
+final items = response.data!.stream
+    .transform(CborSeqStreamTransformer(decoder))
+    .map((bytes) => Tick.fromWire(cbor.cbor.decode(bytes)));
+
+await for (final tick in items) renderRow(tick);
+```
+
+Interceptors plug in at the dio level, not at the transformer level — the streaming path looks the same whether you've stacked auth, retry, and idempotency or not:
+
+```dart
+final dio = Dio(BaseOptions(baseUrl: baseUrl))
+  ..interceptors.add(InterceptorsWrapper(onRequest: (opts, h) {
+    opts.headers['Authorization'] = 'Bearer ${currentToken()}';
+    opts.headers.putIfAbsent('Idempotency-Key', () => const Uuid().v4());
+    h.next(opts);
+  }))
+  ..interceptors.add(RetryInterceptor(dio: dio, retries: 3)); // dio_smart_retry
+```
+
+Errors flow through Dart's normal stream error channel: decoder exceptions propagate as the underlying type; a stream that closes mid-frame raises a `FormatException`. Cancellation through `subscription.cancel()` propagates upstream into dio's request cancellation contract.
+
+### Pick one
+
+| Path | Shape on the consumer side | When to pick |
+|---|---|---|
+| Rust `RpcClient::call_streaming` | `Receiver<Result<O, RpcClientError>>` | Rust server-to-server, Rust CLIs, anything where the consumer is Rust. Bounded mpsc gives backpressure for free. |
+| Flutter `FlutterRuntime::rpc_call_streamed` + frb `StreamSink` | `Stream<FlutterChunkWire>` in Dart | Flutter apps that are fine with one HTTP stack (reqwest in Rust); items decode Dart-side. |
+| dio + `CborSeqStreamTransformer` + `FlutterCborSeqDecoder` | `Stream<Uint8List>` in Dart | Flutter apps that want native HTTP visibility, dio interceptors, or Flutter DevTools network inspection. HTTP lives in Dart; only frame-boundary detection lives in Rust. |
+
+For a worked end-to-end Rust example see [`examples/rpc-streaming-client-rust`](https://github.com/cratestack/cratestack/tree/main/examples/rpc-streaming-client-rust). For the three-crate client split see [Client Runtime](../architecture/client-runtime); for the framing decisions see [ADR 0005 §3.3](../internals/rpc-transport-adr).
+
 ## Errors — uniform `RpcErrorBody` shape
 
 Every error on the RPC binding — whether raised inside the dispatcher (decode failure, unknown op id) or inside a handler (auth denied, not found, validation failed) — wire-shapes as:
