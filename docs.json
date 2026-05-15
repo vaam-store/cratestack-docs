@@ -74,6 +74,12 @@
         ]
       },
       {
+        "group": "Studio",
+        "pages": [
+          "studio/quickstart"
+        ]
+      },
+      {
         "group": "Reference",
         "pages": [
           "reference/mixins",
