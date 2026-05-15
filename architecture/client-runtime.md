@@ -46,22 +46,24 @@ Responsibilities:
 1. HTTP execution
 2. CBOR-first request and response handling in the current slice
 3. negotiated JSON and CBOR support in the target slice
-4. framing seam for future sequence-capable responses such as `application/cbor-seq`
+4. `application/cbor-seq` streaming with a stateful boundary scanner (`CborSeqChunkDecoder`, exported as `pub`) and a typed `RpcClient::call_streaming` / `CratestackClient::post_list_streamed` surface that yields decoded items through a bounded `tokio::sync::mpsc::Receiver`
 5. envelope seam for future COSE support
 6. request journaling and client-local persistence hooks
-7. a future FFI-safe surface for Dart and Flutter wrappers
+7. an FFI-ready Rust bridge for Dart and Flutter wrappers
 8. additive selected `get/list` helpers that keep projecting through the canonical HTTP query contract
 
 ### `cratestack-client-flutter`
 
-Owns the Dart and Flutter-facing safe Rust wrapper over the runtime core.
+Owns the Dart and Flutter-facing safe Rust wrapper over the runtime core. Shipped today; not a future concern.
 
 Responsibilities:
 
 1. opaque runtime lifecycle for Dart or Flutter callers
-2. byte-oriented request and response wrapper types
-3. a future persisted-state projection for Dart or Flutter callers
-4. safe-Rust bridge methods that remain compatible with a future ABI wrapper
+2. byte-oriented request and response wrapper types (`FlutterRequest`, `FlutterResponse`, `FlutterChunkWire`)
+3. unary and batched RPC entrypoints (`rpc_call`, `rpc_batch`) plus their streaming companions (`execute_streamed`, `rpc_call_streamed`)
+4. an FFI-shaped `application/cbor-seq` boundary scanner (`FlutterCborSeqDecoder`) for apps that prefer to run HTTP in Dart via dio while keeping frame detection in Rust
+5. a future persisted-state projection for Dart or Flutter callers
+6. safe-Rust bridge methods that remain compatible with a future ABI wrapper
 
 ### `cratestack-client-dart`
 
@@ -111,7 +113,7 @@ Secrets should remain behind a separate host-owned boundary instead of being mer
 
 ## Dart and FFI boundary
 
-The future Dart runtime should wrap a Rust core rather than expose transport details to feature code.
+The Dart runtime wraps a Rust core rather than exposing transport details to feature code.
 
 Rust should own:
 
@@ -539,7 +541,7 @@ Implemented in this repo:
 12. generated Dart selection builders plus projection wrappers for `getView` / `listView`
 13. request-authorizer hooks in `cratestack-client-rust` built around canonical request strings plus encoded request body bytes so host integrations can attach signed-request headers without changing generated clients
 14. runtime-wide transport config for `cbor` and `json`, with a reserved future envelope seam
-15. documented target-state transport layering across codec, framing, and envelope, including a future `application/cbor-seq` path
+15. `application/cbor-seq` streaming across all three client surfaces (Rust `RpcClient::call_streaming` + `CratestackClient::post_list_streamed`, Flutter `FlutterRuntime::execute_streamed` + `rpc_call_streamed` with `FlutterChunkWire` for frb `StreamSink` integration, and a generated Dart `CborSeqStreamTransformer` that composes with dio's `ResponseBody.stream`)
 16. removal of `CrateStackWireCodec` from the generated Dart seam
 
 ```mermaid
@@ -882,3 +884,12 @@ Intended config:
 2. envelope: `cose_sign1`
 
 This is not implemented yet, but the config seam is already reserved so the generated Dart API does not need another architecture change when envelope support lands.
+
+## Streaming surfaces
+
+The `application/cbor-seq` story is the same wire shape across three client surfaces. Picking between them is a per-app or per-request choice; the runtime contract is identical underneath. Per-call code lives in [the RPC transport guide](../guides/rpc-transport.md#consuming-streams).
+
+1. **`RpcClient::call_streaming<I, O>(op_id, &input)`** in `cratestack-client-rust`. Returns `Result<tokio::sync::mpsc::Receiver<Result<O, RpcClientError>>, RpcClientError>`. Bounded channel (16 in-flight items) gives consumer-side backpressure for free. Pick for Rust callers — server-to-server, CLIs, anything where the consumer speaks Rust.
+2. **`CratestackClient::post_list_streamed<I, O>(path, &input, headers)`** in `cratestack-client-rust`. REST-shaped equivalent of the above, returning the same bounded `Receiver`. Pick for Rust callers against REST-binding schemas (`transport rest` or implicit).
+3. **`FlutterRuntime::rpc_call_streamed(op_id, input, headers, on_chunk)`** in `cratestack-client-flutter` (plus `execute_streamed` for the REST shape). Callback returns `false` to cancel. Typical Flutter integration wraps it with a `flutter_rust_bridge` `StreamSink<FlutterChunkWire>` so Dart code consumes a real `Stream<FlutterChunkWire>` with `Item(Vec<u8>) | End | Error(FlutterRuntimeError)` variants. Pick when one HTTP stack (reqwest in Rust) is fine for the app.
+4. **dio + `CborSeqStreamTransformer` + `FlutterCborSeqDecoder`**. The generated Dart RPC runtime ships `CborSeqDecoderHandle` (abstract; `feed`/`pendingLen`) and `CborSeqStreamTransformer` (a plain `StreamTransformer<Uint8List, Uint8List>`). `FlutterCborSeqDecoder` from `cratestack-client-flutter` is the FFI-backed impl; pure-Dart impls work for web or server-side Dart. Pick when the app wants native HTTP visibility, dio interceptors (auth, retry, idempotency-key), or Flutter DevTools network inspection — HTTP lives in Dart; only frame-boundary detection lives in Rust.
