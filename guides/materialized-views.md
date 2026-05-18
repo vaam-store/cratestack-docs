@@ -61,7 +61,7 @@ Refresh as part of the operation that depends on fresh data. The user clicks "re
 ```rust
 async fn recompute_balances(ctx: &ProcedureCtx) -> Result<AccountBalanceList> {
     ctx.runtime().views().account_balance().refresh().await?;
-    ctx.runtime().views().account_balance().find_many().execute().await
+    ctx.runtime().views().account_balance().find_many().run(ctx.context()).await
 }
 ```
 

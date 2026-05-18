@@ -34,10 +34,10 @@ view ActiveCustomer from Customer, Order {
 view <Name> from <Model>, <Model>, …
 ```
 
-* `<Name>` — PascalCase. Becomes the Rust struct name and the SQL view identifier (snake-cased).
-* `from <Model>, …` — the **source-model dependency list**. Every model referenced in the SQL body must be listed here. The parser validates each name exists. The list also orders view DDL after source-model DDL during [migration generation](../internals/schema-diff-adr).
+* `<Name>` — PascalCase. Becomes the Rust struct name unchanged (`ActiveCustomer`) and the SQL view identifier as snake-cased + naively pluralized (`active_customers`). The naive pluralizer appends `s` (or `es` when the name already ends in `s`), so non-English-plural names like `Summary` produce `summarys` — your hand-written DDL or SQL body needs to use that exact identifier.
+* `from <Model>, …` — the **source-model dependency list**. Each name must resolve to an existing model; the parser rejects unknown ones. The list also orders view DDL after source-model DDL during [migration generation](../internals/schema-diff-adr).
 
-Listing a model in `from` that the SQL body doesn't actually use is a parse-time warning. Referencing a model in the SQL body that isn't in `from` is a parse-time error — but only for models the parser can detect by name; the SQL itself is not parsed.
+The parser does **not** inspect the SQL body — it cannot detect a body that references a model missing from `from`, nor a `from` model the body doesn't use. Both are developer responsibilities. (CI's `verify` migration replay catches body errors at the database boundary before they ship.)
 
 ## Fields
 
@@ -59,7 +59,9 @@ view RevenueByDay from Order {
 }
 ```
 
-`@@no_unique` drops `find_unique` from the generated delegate and is **incompatible with `@@materialized`** (see below).
+`@@no_unique` makes the accessor return a separate `ViewDelegateNoUnique<'_, V>` instead of the standard `ViewDelegate<'_, V, PK>`. The no-unique delegate exposes only `find_many` — `find_unique` and `refresh()` are absent **at the type level**, so a call like `runtime.views().revenue_by_day().find_unique(())` is a compile error rather than a runtime "WHERE  = $1" footgun.
+
+`@@no_unique` is **incompatible with `@@materialized`** (see below): concurrent refresh requires a unique index.
 
 ### `@from(Model.field)`
 
@@ -104,6 +106,8 @@ Same authorization machinery as models, but **only the `"read"` action is suppor
 
 Multiple `@@allow("read", …)` rules combine with OR, same as on models.
 
+**No `@@allow` means no rows visible.** Views inherit the same default-deny posture models have: a view with no `@@allow("read", …)` rule declared produces an implicit `WHERE FALSE` in every read query. This is intentional — it forces explicit authorisation rather than allowing accidental data exposure. Use `@@allow("read", auth() != null)` for a "any authenticated caller can read" stance.
+
 ## `@@materialized` (server-only)
 
 Marks the view as a Postgres materialized view. Server-only — building this view with the embedded backend enabled is a **hard compile error** referencing [ADR 0003](../internals/views-adr). There is no silent fallback to a regular view.
@@ -137,29 +141,38 @@ Refresh is **never automatic**. See the [Materialized views guide](../guides/mat
 
 ## Generated surface
 
-For a view named `ActiveCustomer`, the macro emits:
+For a view named `ActiveCustomer` declared with the schema above, the macro emits (in `cratestack_schema::models`):
 
 ```rust
 pub struct ActiveCustomer {
-    pub id: i32,
+    pub id: i64,
     pub email: String,
-    pub order_count: i32,
+    pub orderCount: i64,
 }
 
-// On the runtime:
-runtime.views().active_customer()       // -> ViewDelegate<'_, ActiveCustomer, i32>
-    .find_many()
-    .where_(/* … */)
-    .execute()
-    .await?;
-
-runtime.views().active_customer()
-    .find_unique(customer_id)
-    .execute()
-    .await?;
+pub const ACTIVE_CUSTOMER_VIEW: cratestack::ViewDescriptor<ActiveCustomer, i64> = /* … */;
 ```
 
-Views never expose `insert`, `update`, or `delete`. This is enforced at the **type level** — the `ViewDescriptor` does not implement the `WriteSource` trait that powers write builders.
+Rust field names are kept verbatim from the schema (`orderCount`, not `order_count`); the row decoder looks columns up by their schema-side name via the macro-emitted `<sql_name> AS "<rust_name>"` aliases in `select_projection`. Scalar `Int` is `i64`.
+
+On the runtime:
+
+```rust
+let cool = cratestack_schema::Cratestack::builder(pool).build();
+
+// find_many — read-only iteration with filter / order / limit.
+let rows = cool
+    .views()
+    .active_customer()      // ViewDelegate<'_, ActiveCustomer, i64>
+    .find_many()
+    .run(&ctx)              // CoolContext drives `@@allow` enforcement
+    .await?;
+
+// find_unique — single-row lookup by PK. Returns Option<ActiveCustomer>.
+let one = cool.views().active_customer().find_unique(customer_id).run(&ctx).await?;
+```
+
+Views never expose `insert`, `update`, or `delete`. This is enforced **at the type level** — `ViewDescriptor` does not implement the `WriteSource` trait that powers write builders, so the bound on those builders simply fails to hold.
 
 ## Parse-time validation summary
 

@@ -7,11 +7,32 @@ description: Read-only typed views built from .cstack model projections, with pe
 
 ## Status
 
-Proposed
+Accepted
 
 ## Date
 
-2026-05-14
+- Proposed: 2026-05-14
+- Accepted: 2026-05-18
+
+## Implementation
+
+Shipped end-to-end across eight PRs on `cratestack/cratestack`:
+
+| # | Slice |
+| --- | --- |
+| [#84](https://github.com/cratestack/cratestack/pull/84) | parser + IR + validator (`view <Name> from <Model>, …`, `@@server_sql`/`@@embedded_sql`/`@@sql`/`@@materialized`/`@@no_unique`, `@@allow("read", …)`) |
+| [#85](https://github.com/cratestack/cratestack/pull/85) | `ReadSource` / `WriteSource` traits + `ViewDescriptor` in `cratestack-sql` |
+| [#86](https://github.com/cratestack/cratestack/pull/86) | shared read helpers polymorphic over `ReadSource` (`push_scoped_conditions`, `authorize_record_action`, `render_select`, `render_select_by_pk`) |
+| [#87](https://github.com/cratestack/cratestack/pull/87) | read builders generic over `ReadSource`; `ViewDelegate` + `ViewDelegateNoUnique` on both backends |
+| [#88](https://github.com/cratestack/cratestack/pull/88) | macro emission — view struct, `<UPPER>_VIEW` descriptor const, `FromRow` impls, `runtime.views().<view_snake>()` accessor; embedded composer hard-errors on `@@materialized` |
+| [#89](https://github.com/cratestack/cratestack/pull/89) | `cratestack-migrate` IR (`CreateView` / `ReplaceView` / `DropView` / `CreateMaterializedView` / `DropMaterializedView`) + diff + per-backend DDL + topological ordering against source tables and columns |
+| [#90](https://github.com/cratestack/cratestack/pull/90) | `@@allow("read", …)` policy lowering — view attributes flow through the same model policy machinery via a synthesized `Model` |
+| [#91](https://github.com/cratestack/cratestack/pull/91) | end-to-end integration tests against testcontainers Postgres (incl. `refresh()` round-trip) + in-memory SQLite |
+
+Two notes on the shipped implementation that differ from the original proposal:
+
+- **Body changes emit `Drop + Create`, not `CREATE OR REPLACE VIEW`.** Codex flagged that a `ReplaceView` op at the tail of the migration would leave the old view alive when the same migration also dropped a column the old body referenced (Postgres rejects the column drop in that case). The diff engine now models body changes as two ops — drop in the pre-column-drops bucket, create in the post-column-adds bucket — losing the atomicity of Postgres `CREATE OR REPLACE VIEW` but gaining ordering correctness when column ops overlap with view body changes. Within a Postgres migration transaction other connections never observe the transient missing-view state, so the atomicity loss has no externally visible effect. The `ReplaceView` IR variant is preserved for hand-constructed callers.
+- **`@@no_unique` produces a separate `ViewDelegateNoUnique<V>` type** rather than just omitting `find_unique` from a single `ViewDelegate<V, PK>`. This enforces the gate at the type level — `runtime.views().<v>().find_unique(())` on a no-unique view is a compile error rather than a runtime "WHERE  = $1" footgun.
 
 ## Context
 
