@@ -644,6 +644,36 @@ let config = RuntimeConfigWire {
 };
 ```
 
+### Dropping JSON On CBOR-Only Backends
+
+Both facade crates (`cratestack-pg`, `cratestack-sqlite`) and the underlying `cratestack-client-rust` and `cratestack-client-flutter` crates expose a `codec-json` Cargo feature. It is **on by default**, so existing setups keep both CBOR and JSON. Backend services that have standardized on CBOR can opt out with:
+
+```toml
+[dependencies]
+cratestack = { package = "cratestack-pg", version = "0.4", default-features = false, features = ["decimal-rust-decimal"] }
+```
+
+Disabling `codec-json`:
+
+1. removes the `JsonCodec` wrapper type and its `HttpClientCodec` impl
+2. drops `application/json` from the Accept header `CborCodec` advertises — a server with content negotiation will pick CBOR (or fail with `406 Not Acceptable`) instead of sending JSON the client can no longer decode
+3. removes the JSON fallback inside `CborCodec::decode_response`, so a stray `Content-Type: application/json` response surfaces as a hard codec error instead of being silently negotiated
+4. removes the `RuntimeTransportClient::Json` variant from the FFI runtime — building the `RuntimeHandle` with `RuntimeCodecConfig::Json` returns a `BadInput` error explaining the codec is not compiled in
+
+The opt-out is configuration-level only — CBOR stays unconditional because the schema macros emit `pub struct Client<C = CborCodec>` as the default codec parameter. The projection-view client methods (`get_view` / `list_view` / `list_view_paged`) keep working with `codec-json` off because they route through `self.codec.accept_header_value()` instead of hardcoding `application/json`; the model read routes that back them advertise both `application/cbor` and `application/json` on the server side, so a CBOR-only client decodes the projected `serde_json::Value` shape through `CborCodec`.
+
+The Flutter bridge separately forwards the same feature (`cratestack-client-flutter` exposes its own `codec-json` flag, on by default). A host shell that locks the bridge to CBOR can `default-features = false` to drop JSON support there too; leaving the feature on keeps `FlutterRuntimeCodec::Json` usable at runtime.
+
+### Projection-Decode Tolerance
+
+The `ProjectionDecoder` trait emitted for every selected read tolerates server responses that omit columns the projection didn't ask for, while still hard-failing on a missing **required** column. Each generated field is decoded through a per-arity `MissingFieldFallback`:
+
+1. `Reject` — the field is a required scalar (`Int`, `String`, etc.). Missing → decode error
+2. `Null` — the field is an optional scalar (`Int?`). Missing → `None`
+3. `EmptyArray` — the field is a list (`Int[]`). Missing → empty `Vec`
+
+This applies to model `?fields=…` reads and to view projections through the same decoder. The intent is to let server schemas grow projection-relevant columns without breaking every older client: an old client asking for an old field set is unaffected, and a new client asking for a new optional field that the server hasn't returned still decodes cleanly. **Required scalars deliberately reject** rather than substitute defaults — a missing required column on the wire is a contract bug worth surfacing, not data to invent.
+
 ### Rust Redis State Store
 
 Server-side Rust clients can opt into Redis-backed request journaling without adding Redis to the base runtime crate:
