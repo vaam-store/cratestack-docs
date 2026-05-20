@@ -17,7 +17,7 @@ The helper wraps a closure in `BEGIN`, `SET TRANSACTION ISOLATION LEVEL ...`,
 the closure body, and `COMMIT`:
 
 ```rust
-use cratestack::{run_in_isolated_tx, TransactionIsolation, CoolError};
+use cratestack::{cool_error_from_sqlx, run_in_isolated_tx, TransactionIsolation, CoolError};
 
 run_in_isolated_tx(
     &pool,
@@ -27,7 +27,7 @@ run_in_isolated_tx(
             .bind(account_id)
             .fetch_one(&mut *tx)
             .await
-            .map_err(|e| CoolError::Database(e.to_string()))?;
+            .map_err(cool_error_from_sqlx)?;
         if balance < amount {
             return Err(CoolError::Validation("insufficient funds".to_owned()));
         }
@@ -36,12 +36,19 @@ run_in_isolated_tx(
             .bind(account_id)
             .execute(&mut *tx)
             .await
-            .map_err(|e| CoolError::Database(e.to_string()))?;
+            .map_err(cool_error_from_sqlx)?;
         Ok(((), tx))
     },
 )
 .await?;
 ```
+
+Use `cool_error_from_sqlx` rather than `|e| CoolError::Database(e.to_string())`
+at sqlx call sites — it preserves the SQLSTATE code and constraint name on
+the typed `CoolError::DatabaseTyped` variant, so unique-violation helpers
+and similar predicates can compare typed fields instead of substring-matching
+the stringified detail. A missing row (`sqlx::Error::RowNotFound`) is mapped
+to `CoolError::NotFound` so the response is a 404 rather than a 500.
 
 The closure receives the transaction and must return it back paired with
 the body's result — the wrapper owns the commit so the retry loop can
